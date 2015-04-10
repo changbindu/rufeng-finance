@@ -6,7 +6,7 @@ Created on Nov 9, 2011
 from dam.baseDAM import BaseDAM
 from model.stockObjects import Quote, Tick, TupleQuote
 from lib.util import splitListEqually
-import sys
+import sys, os
 
 from sqlalchemy import Column, Integer, String, Float, Sequence, create_engine, and_
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -105,12 +105,13 @@ class SqlDAM(BaseDAM):
         self.WriteSession = None
         self.writeSession = None
 
-
     def setup(self, setting):
         ''' set up '''
         if 'db' not in setting:
             raise Exception("db not specified in setting")
-
+        dir = os.path.split(os.path.realpath(setting['db'].strip("sqlite:///")))[0]
+        if not os.path.exists(dir):
+            os.makedirs(dir, exist_ok = True)
         self.engine = create_engine(setting['db'], echo = self.echo)
 
     def getReadSession(self):
