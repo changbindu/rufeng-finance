@@ -48,7 +48,7 @@ class QuoteSql(Base):
     low = Column(Float)
     close = Column(Float)
     volume = Column(Integer)
-    adjClose = Column(Float)
+    adjClose = Column(Float) # price before the XD
 
     def __init__(self, symbol, time, open, high, low, close, volume, adjClose):
         ''' constructor '''

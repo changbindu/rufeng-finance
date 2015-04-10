@@ -111,7 +111,7 @@ class Crawler(object):
                 self.outputDAM.commit()
 
 if __name__ == '__main__':
-    crawler = Crawler(["002232.ss", "300192.ss", "600882.ss"], "20150101", "20150401", 1)
+    crawler = Crawler(["002232", "300192", "600882"], "20150101", "20150401", 1)
     crawler.getAndSaveSymbols()
     print("Sqlite location: %s" % crawler.sqlLocation)
     print("Succeeded: %s" % crawler.succeeded)

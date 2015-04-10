@@ -8,6 +8,8 @@ import urllib.request
 import re
 import traceback
 
+from model.stockObjects import ChinaStockSymbol
+
 class EastmoneyFinance(object):
     def getAllStockSymbols(self):
         """
@@ -17,10 +19,13 @@ class EastmoneyFinance(object):
         stocks = {}
         url = 'http://quote.eastmoney.com/stocklist.html'
         html = urllib.request.urlopen(url).read()
-        soup = BeautifulSoup(html)
+        soup = BeautifulSoup(html.decode('gb2312', 'replace'))
         for item in soup.find_all("a", href=re.compile("^http://quote.eastmoney.com/(sh|sz)\d{6}\.html"), target="_blank"):
             symbol = item.string[-7:-1]
             name = item.string[0:-8]
+            prefix = symbol[0:3]
+            if prefix not in (ChinaStockSymbol.SS_PREFIX | ChinaStockSymbol.SZ_PREFIX):
+                continue
             stocks[symbol] = name
         return stocks
 

@@ -11,15 +11,24 @@ sample usage:
 '''
 import urllib.request
 import traceback
-from model.stockObjects import Quote
+from model.stockObjects import Quote, ChinaStockSymbol
 from lib.errors import UfException, Errors
 
 from lib.util import logger
 
 class YahooFinance(object):
+    def __chinaSymbolPrefix(self, symbol):
+        prefix = symbol[0:3]
+        if prefix in ChinaStockSymbol.SS_PREFIX:
+            return '.ss'
+        elif prefix in ChinaStockSymbol.SZ_PREFIX:
+            return '.sz'
+        else:
+            return ''
+
     def __request(self, symbol, stat):
         try:
-            url = 'http://finance.yahoo.com/d/quotes.csv?s=%s&f=%s' % (symbol, stat)
+            url = 'http://finance.yahoo.com/d/quotes.csv?s=%s%s&f=%s' % (symbol, self.__chinaSymbolPrefix(symbol), stat)
             return urllib.request.urlopen(url).read().strip().strip('"')
         except IOError:
             raise UfException(Errors.NETWORK_ERROR, "Can't connect to Yahoo server")
@@ -65,7 +74,7 @@ class YahooFinance(object):
         try:
             start = str(start).replace('-', '')
             end = str(end).replace('-', '')
-            url = 'http://ichart.yahoo.com/table.csv?s=%s&' % symbol + \
+            url = 'http://ichart.yahoo.com/table.csv?s=%s%s&' % (symbol, self.__chinaSymbolPrefix(symbol)) + \
                 'd=%s&' % str(int(end[4:6]) - 1) + \
                 'e=%s&' % str(int(end[6:8])) + \
                 'f=%s&' % str(int(end[0:4])) + \
@@ -75,6 +84,7 @@ class YahooFinance(object):
                 'c=%s&' % str(int(start[0:4])) + \
                 'ignore=.csv'
             logger.debug("Retreiving stock data of %s from date %s - %s ..." %(symbol, start, end))
+            logger.debug("url: %s" %url)
             days = urllib.request.urlopen(url).readlines()
             values = [day.decode('utf-8')[:-2].split(',') for day in days]
             # sample values:[['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Clos'], \

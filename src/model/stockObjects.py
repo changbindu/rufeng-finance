@@ -107,7 +107,6 @@ class Action(object):
 
         return action
 
-
 class Type(object):
     ''' type class '''
     MARKET = 'market'
@@ -121,6 +120,9 @@ class Type(object):
 
         return type
 
+class ChinaStockSymbol(object):
+    SS_PREFIX = set(["600", "601", "603"])
+    SZ_PREFIX = set(["000", "002", "300"])
 
 class Order(object):
     ''' order class'''
