@@ -84,8 +84,8 @@ class YahooFinance(object):
                 'c=%s&' % str(int(start[0:4])) + \
                 'ignore=.csv'
             logger.debug("Retreiving stock data of %s from date %s - %s ..." %(symbol, start, end))
-            logger.debug("url: %s" %url)
-            days = urllib.request.urlopen(url).readlines()
+            logger.debug("url:%s" %url)
+            days = urllib.request.urlopen(url, timeout = 10).readlines()
             values = [day.decode('utf-8')[:-2].split(',') for day in days]
             # sample values:[['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Clos'], \
             #              ['2009-12-31', '112.77', '112.80', '111.39', '111.44', '90637900', '109.7']...]

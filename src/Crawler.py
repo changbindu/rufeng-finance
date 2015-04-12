@@ -52,7 +52,6 @@ class Crawler(object):
                     try:
                         self.inputDAM.setSymbol(symbol)
                         quotes = self.inputDAM.readQuotes(self.start, self.end)
-
                     except BaseException as excp:
                         failCount += 1
                         lastExcp = excp
@@ -67,12 +66,15 @@ class Crawler(object):
             with self.writeLock: #dam is not thread safe
                 self.outputDAM.setSymbol(symbol)
                 self.outputDAM.writeQuotes(quotes)
-
+        except KeyboardInterrupt as excp:
+            logger.error("Interrupted while processing %s: %s" % (symbol, excp))
+            self.failed.append(symbol)
+            raise excp;
         except BaseException as excp:
             logger.error("Error while processing %s: %s" % (symbol, excp))
             self.failed.append(symbol)
         else:
-            logger.info("Processed %s" % symbol)
+            logger.info("Processed %s (%d/%d)" % (symbol, self.symbols.index(symbol) + 1, len(self.symbols)))
             self.succeeded.append(symbol)
 
     def getAndSaveSymbols(self):
@@ -109,6 +111,7 @@ class Crawler(object):
             for symbol in self.symbols:
                 self.__getSaveOneSymbol(symbol)
                 self.outputDAM.commit()
+                counter += 1
 
 if __name__ == '__main__':
     crawler = Crawler(["002232", "300192", "600882"], "20150101", "20150401", 1)
@@ -116,4 +119,3 @@ if __name__ == '__main__':
     print("Sqlite location: %s" % crawler.sqlLocation)
     print("Succeeded: %s" % crawler.succeeded)
     print("Failed: %s" % crawler.failed)
-

@@ -18,7 +18,7 @@ class EastmoneyFinance(object):
         """
         stocks = {}
         url = 'http://quote.eastmoney.com/stocklist.html'
-        html = urllib.request.urlopen(url).read()
+        html = urllib.request.urlopen(url, timeout = 10).read()
         soup = BeautifulSoup(html.decode('gb2312', 'replace'))
         for item in soup.find_all("a", href=re.compile("^http://quote.eastmoney.com/(sh|sz)\d{6}\.html"), target="_blank"):
             symbol = item.string[-7:-1]
