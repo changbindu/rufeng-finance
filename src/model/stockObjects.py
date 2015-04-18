@@ -6,11 +6,25 @@ Created on Nov 6, 2011
 import json
 from collections import namedtuple
 from lib.errors import UfException, Errors
+from enum import Enum
 
 # namedtuple are used to handle data getting from csv or internet
 TICK_FIELDS = ['time', 'open', 'high', 'low', 'close', 'volume']
 #QUOTE_FIELDS = ['time', 'open', 'high', 'low', 'close', 'volume', 'adjClose']
 QUOTE_FIELDS = ['time', 'close', 'volume', 'low', 'high']
+
+class Fundamental(object):
+    ''' fundamental class '''
+    def __init__(self):
+        self.sector = None
+        self.industry = None
+        self.summary = None # text summary
+        self.totalShare = 0
+        self.tradableShare = 0
+        self.priceEarning = 0
+        self.netAsset = 0
+        self.income = 0
+        self.netIncome = 0
 
 class Tick(object):
     ''' tick class '''
@@ -120,6 +134,15 @@ class Type(object):
 
         return type
 
+class Stock(object):
+    ''' stock class'''
+    def __init__(self, symbol, name, latest, fundamental, history):
+        self.symbol = symbol
+        self.name = name
+        self.latest = latest
+        self.fundamental = fundamental
+        self.history = history
+
 class ChinaStockSymbol(object):
     SS_PREFIX = set(["600", "601", "603"])
     SZ_PREFIX = set(["000", "002", "300"])
@@ -196,7 +219,6 @@ class Order(object):
         d = json.loads(string)
         return Order(d['accountId'], d['action'], d['type'], d['symbol'], d['share'], d.get('price'),
                      d.get('orderId'), d.get('status'), d.get('filledTime'), d.get('executedTime'))
-
 
     type = property(getType, setType)
     action = property(getAction, setAction)

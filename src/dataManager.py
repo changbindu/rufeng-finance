@@ -16,7 +16,6 @@ class DataManager(object):
         logger.info("All stocks(%d):\n%s" % (len(symbols), symbols))
         crawler = Crawler(symbols, self.start, self.end, 1)
         crawler.getAndSaveSymbols()
-        
 
 if __name__ == '__main__':
     dataManager = DataManager()

@@ -1,0 +1,40 @@
+'''
+@author: changbin
+'''
+
+from lib.errors import Errors, UfException
+
+class SelectorFactory(object):
+    ''' selector factory '''
+    @staticmethod
+    def createSelector(selectorType, config = None):
+        ''' create DAM '''
+        if 'basic' == selectorType:
+            from selector.basicSelector import BasicSelector
+            selector = BasicSelector()
+        elif 'hot' == selectorType:
+            from selector.hotSelector import HotSelector
+            selector = HotSelector()
+        elif 'macd' == selectorType:
+            from selector.MACDSelector import MACDSelector
+            selector = MACDSelector()
+        elif 'stability' == selectorType:
+            from selector.stabilitySelector import StabilitySelector
+            selector = StabilitySelector()
+        elif 'topic' == selectorType:
+            from selector.topicSeletor import TopicSeletor
+            selector = TopicSeletor()
+        elif 'trend' == selectorType:
+            from selector.trendSelector import TrendSelector
+            selector = TrendSelector()
+        else:
+            raise UfException(Errors.INVALID_DAM_TYPE,
+                              "Selector type is invalid %s" % selectorType)
+
+        selector.config = config
+        return selector
+
+    @staticmethod
+    def getAvailableTypes():
+        ''' return all available types '''
+        return ['basic', 'hot', 'macd', 'stability', 'topic', 'trend']
