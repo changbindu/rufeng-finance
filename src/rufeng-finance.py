@@ -3,6 +3,7 @@ __author__ = 'changbi'
 from optparse import OptionParser
 from dataManager import DataManager
 from selectEngine import SelectEngine
+from lib.util import logger
 
 class RufengFinance(object):
     def __init__(self):
@@ -29,10 +30,11 @@ class RufengFinance(object):
         if len(args) < 0:
             parser.error("incorrect number of arguments")
             return -1
-        if options.download:
-            print("download data ...")
         if options.config:
-            print("using config %s" % options.config)
+            logger.info("using config %s" % options.config)
+        if options.download:
+            logger.info("download data ...")
+            self.dataManager.downloadAll(options.append)
 
         return 0
 

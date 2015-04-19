@@ -14,6 +14,10 @@ class BaseDAM(object):
         ''' constructor '''
         self.__symbol = None
 
+    def listSymbols(self):
+        ''' list all stocks in market, (symbol : name) '''
+        raise UfException(Errors.UNDEFINED_METHOD, "listSymbols method is not defined")
+
     def readQuotes(self, start, end):
         ''' read quotes '''
         raise UfException(Errors.UNDEFINED_METHOD, "readQuotes method is not defined")

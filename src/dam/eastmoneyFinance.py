@@ -6,7 +6,6 @@ Created on Dec 21, 2010
 from bs4 import BeautifulSoup
 import urllib.request
 import re
-import traceback
 
 from model.stockObjects import ChinaStockSymbol
 
@@ -19,7 +18,8 @@ class EastmoneyFinance(object):
         stocks = {}
         url = 'http://quote.eastmoney.com/stocklist.html'
         html = urllib.request.urlopen(url, timeout = 10).read()
-        soup = BeautifulSoup(html.decode('gb2312', 'replace'))
+        html = html.decode('gb2312', 'replace')
+        soup = BeautifulSoup(html)
         for item in soup.find_all("a", href=re.compile("^http://quote.eastmoney.com/(sh|sz)\d{6}\.html"), target="_blank"):
             symbol = item.string[-7:-1]
             name = item.string[0:-8]

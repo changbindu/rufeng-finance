@@ -4,118 +4,106 @@ Created on Dec 4, 2011
 @author: ppa
 '''
 from dam.DAMFactory import DAMFactory
-
-from os import path
-import traceback
-import time
-
 from threading import Thread
 from threading import Lock
 
 from lib.util import logger
 
-THREAD_TIMEOUT = 5
 MAX_TRY = 3
 
 class Crawler(object):
     ''' collect quotes/ticks for a list of symbol '''
-    def __init__(self, symbols, start, end, poolsize = 5):
+    def __init__(self, dbpath, poolsize = 5):
         ''' constructor '''
-        self.symbols = symbols
-        self.sqlLocation = None
-        self.outputDAM = DAMFactory.createDAM("sql", self.__getOutputDamSetting())
+        self.symbols = []
+        self.outputDAM = DAMFactory.createDAM("sql", {'db': dbpath})
         self.inputDAM = DAMFactory.createDAM("yahoo")
-        self.start = start
-        self.end = end
         self.poolsize = poolsize
         self.readLock = Lock()
         self.writeLock = Lock()
         self.failed = []
         self.succeeded = []
+        self.threads = []
+        self.counter = 0
 
-    def __getOutputDamSetting(self):
-        self.sqlLocation = 'sqlite:///%s' % self.__getOutputSql()
-        logger.info("Sqlite location: %s" % self.sqlLocation)
-        return {'db': self.sqlLocation}
+    def addSymbol(self, symbol, start, end):
+        self.symbols.append((symbol, start, end))
 
-    def __getOutputSql(self):
-        return path.join("./" "data", "stock.sqlite")
+    def reset(self):
+        self.symbols = []
+        self.succeeded = []
+        self.failed = []
+        self.counter = 0
 
-    def __getSaveOneSymbol(self, symbol):
+    def start(self):
+        if (len(self.threads) == 0):
+            for i in range(0, self.poolsize):
+                thread = Thread(name = "CrawlerThread%d" %i, target = self.__getAndSaveSymbols())
+                thread.daemon = True
+                self.threads.append(thread)
+        for t in self.threads:
+            t.start()
+
+    def poll(self, timeout = None):
+        for t in self.threads:
+            t.join(timeout) # no need to block, because thread should complete at last
+            if t.is_alive():
+                logger.warning("Thread %s timeout" %t.name)
+
+    def __getSaveOneSymbol(self, symbol, start, end):
         ''' get and save data for one symbol '''
-        try:
-            lastExcp = None
-            with self.readLock: #dam is not thread safe
-                failCount = 0
-                #try several times since it may fail
-                while failCount < MAX_TRY:
-                    try:
-                        self.inputDAM.setSymbol(symbol)
-                        quotes = self.inputDAM.readQuotes(self.start, self.end)
-                    except BaseException as excp:
-                        failCount += 1
-                        lastExcp = excp
-                        logger.warning("Failed, %s" % excp)
-                        logger.debug("Retry")
-                    else:
-                        break
+        lastExcp = None
+        with self.readLock: #dam is not thread safe
+            failCount = 0
+            #try several times since it may fail
+            while failCount < MAX_TRY:
+                try:
+                    self.inputDAM.setSymbol(symbol)
+                    quotes = self.inputDAM.readQuotes(start, end)
+                except BaseException as excp:
+                    failCount += 1
+                    lastExcp = excp
+                    logger.warning("Failed, %s" % excp)
+                    logger.debug("Retry")
+                else:
+                    break
 
-                if failCount >= MAX_TRY:
-                    raise BaseException("Can't retrieve historical data %s" % lastExcp)
+            if failCount >= MAX_TRY:
+                raise BaseException("Can't retrieve historical data %s" % lastExcp)
 
-            with self.writeLock: #dam is not thread safe
-                self.outputDAM.setSymbol(symbol)
-                self.outputDAM.writeQuotes(quotes)
-        except KeyboardInterrupt as excp:
-            logger.error("Interrupted while processing %s: %s" % (symbol, excp))
-            self.failed.append(symbol)
-            raise excp;
-        except BaseException as excp:
-            logger.error("Error while processing %s: %s" % (symbol, excp))
-            self.failed.append(symbol)
-        else:
-            logger.info("Processed %s (%d/%d)" % (symbol, self.symbols.index(symbol) + 1, len(self.symbols)))
-            self.succeeded.append(symbol)
+        with self.writeLock: #dam is not thread safe
+            self.outputDAM.setSymbol(symbol)
+            self.outputDAM.writeQuotes(quotes)
 
-    def getAndSaveSymbols(self):
+    def __getAndSaveSymbols(self):
         ''' get and save data '''
-        counter = 0
-        rounds = 0
-
-        if self.poolsize > 1:
-            while counter < len(self.symbols):
-                size = len(self.symbols) - counter
-                if self.poolsize < size:
-                    size = self.poolsize
-                symbols = self.symbols[counter: counter + size]
-                threads = []
-                for symbol in symbols:
-                    thread = Thread(name = symbol, target = self.__getSaveOneSymbol, args = [symbol])
-                    thread.daemon = True
-                    thread.start()
-                    threads.append(thread)
-
-                for thread in threads:
-                    thread.join(THREAD_TIMEOUT) # no need to block, because thread should complete at last
-                    if thread.is_active():
-                        logger.warning("Thread timeout")
-
-                #can't start another thread to do commit because for sqlLite, only object for the same thread can be commited
-                if 0 == rounds % 3:
-                    self.outputDAM.commit()
-
-                counter += size
-                rounds += 1
-                time.sleep(5)
-        else:
-            for symbol in self.symbols:
-                self.__getSaveOneSymbol(symbol)
+        self.counter = 0
+        while self.counter < len(self.symbols):
+            symbol = self.symbols[self.counter]
+            try:
+                self.__getSaveOneSymbol(symbol[0], symbol[1], symbol[2])
+            except KeyboardInterrupt as excp:
+                logger.error("Interrupted while processing %s: %s" % (symbol, excp))
+                self.failed.append(symbol)
+                raise excp;
+            except BaseException as excp:
+                logger.error("Error while processing %s: %s" % (symbol, excp))
+                self.failed.append(symbol)
+            else:
+                logger.info("Success processed %s" % symbol[0])
+                self.succeeded.append(symbol)
+            self.counter += 1
+            if 0 == self.counter % 3:
                 self.outputDAM.commit()
-                counter += 1
+                logger.info("Processed %d/%d" %(self.counter, len(self.symbols)))
 
 if __name__ == '__main__':
-    crawler = Crawler(["002232", "300192", "600882"], "20150101", "20150401", 1)
-    crawler.getAndSaveSymbols()
-    print("Sqlite location: %s" % crawler.sqlLocation)
+    dbpath = "sqlite:///data/stock.sqlite"
+    crawler = Crawler(dbpath, 2)
+    for symbol in ("002232", "300192", "600882"):
+        crawler.addSymbol(symbol, "20150101", "20150401")
+    crawler.start()
+    crawler.poll()
+    print("Sql database location: %s" % dbpath)
     print("Succeeded: %s" % crawler.succeeded)
     print("Failed: %s" % crawler.failed)

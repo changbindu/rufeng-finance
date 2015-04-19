@@ -26,6 +26,9 @@ class DAMFactory(object):
         elif 'sql' == damType:
             from dam.sqlDAM import SqlDAM
             dam = SqlDAM()
+        elif 'eastfinance' == damType:
+            from dam.eastmoneyDAM import EastmoneyDAM
+            dam = EastmoneyDAM()
         else:
             raise UfException(Errors.INVALID_DAM_TYPE,
                               "DAM type is invalid %s" % damType)
@@ -36,4 +39,4 @@ class DAMFactory(object):
     @staticmethod
     def getAvailableTypes():
         ''' return all available types '''
-        return ['yahoo', 'google', 'excel', 'hbase', 'sql']
+        return ['yahoo', 'google', 'excel', 'hbase', 'sql', 'eastfinance']
