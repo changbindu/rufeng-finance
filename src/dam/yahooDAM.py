@@ -17,10 +17,10 @@ class YahooDAM(BaseDAM):
         super(YahooDAM, self).__init__()
         self.__yf = YahooFinance()
 
-    def readQuotes(self, start, end):
+    def readQuotes(self, symbol, start, end):
         ''' read quotes from Yahoo Financial'''
-        if self.symbol is None:
+        if symbol is None:
             LOG.debug('Symbol is None')
-            return []
+            return None
 
-        return self.__yf.getQuotes(self.symbol, start, end)
+        return self.__yf.getQuotes(symbol, start, end)

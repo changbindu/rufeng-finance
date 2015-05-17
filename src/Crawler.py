@@ -4,8 +4,11 @@ Created on Dec 4, 2011
 @author: ppa
 '''
 from dam.DAMFactory import DAMFactory
+from model.stockObjects import Tick, Quote, Stock
 from threading import Thread
 from threading import Lock
+import time
+import traceback
 
 from lib.util import logger
 
@@ -15,7 +18,7 @@ class Crawler(object):
     ''' collect quotes/ticks for a list of symbol '''
     def __init__(self, dbpath, poolsize = 5):
         ''' constructor '''
-        self.symbols = []
+        self.stocks = []
         self.outputDAM = DAMFactory.createDAM("sql", {'db': dbpath})
         self.inputDAM = DAMFactory.createDAM("yahoo")
         self.poolsize = poolsize
@@ -26,8 +29,8 @@ class Crawler(object):
         self.threads = []
         self.counter = 0
 
-    def addSymbol(self, symbol, start, end):
-        self.symbols.append((symbol, start, end))
+    def addStock(self, stock, start, end):
+        self.stocks.append((stock, start, end))
 
     def reset(self):
         self.symbols = []
@@ -50,7 +53,7 @@ class Crawler(object):
             if t.is_alive():
                 logger.warning("Thread %s timeout" %t.name)
 
-    def __getSaveOneSymbol(self, symbol, start, end):
+    def __getSaveOneSymbol(self, stock, start, end):
         ''' get and save data for one symbol '''
         lastExcp = None
         with self.readLock: #dam is not thread safe
@@ -58,13 +61,13 @@ class Crawler(object):
             #try several times since it may fail
             while failCount < MAX_TRY:
                 try:
-                    self.inputDAM.setSymbol(symbol)
-                    quotes = self.inputDAM.readQuotes(start, end)
+                    quotes = self.inputDAM.readQuotes(stock.symbol, start, end)
                 except BaseException as excp:
                     failCount += 1
                     lastExcp = excp
-                    logger.warning("Failed, %s" % excp)
-                    logger.debug("Retry")
+                    logger.warning("Failed, %s: %s" % (excp, traceback.format_exc()))
+                    logger.info("Retry in 1 second")
+                    time.sleep(1)
                 else:
                     break
 
@@ -72,38 +75,29 @@ class Crawler(object):
                 raise BaseException("Can't retrieve historical data %s" % lastExcp)
 
         with self.writeLock: #dam is not thread safe
-            self.outputDAM.setSymbol(symbol)
-            self.outputDAM.writeQuotes(quotes)
+            self.outputDAM.writeQuotes(stock.symbol, quotes)
 
     def __getAndSaveSymbols(self):
         ''' get and save data '''
         self.counter = 0
-        while self.counter < len(self.symbols):
-            symbol = self.symbols[self.counter]
+        while self.counter < len(self.stocks):
+            stock = self.stocks[self.counter][0]
+            start = self.stocks[self.counter][1]
+            end = self.stocks[self.counter][2]
             try:
-                self.__getSaveOneSymbol(symbol[0], symbol[1], symbol[2])
+                self.__getSaveOneSymbol(stock, start, end)
             except KeyboardInterrupt as excp:
-                logger.error("Interrupted while processing %s: %s" % (symbol, excp))
-                self.failed.append(symbol)
-                raise excp;
+                logger.error("Interrupted while processing %s: %s" % (stock.symbol, excp))
+                self.failed.append(stock)
+                raise excp
             except BaseException as excp:
-                logger.error("Error while processing %s: %s" % (symbol, excp))
-                self.failed.append(symbol)
+                logger.error("Error while processing %s: %s" % (stock.symbol, excp))
+                logger.debug(traceback.format_exc())
+                self.failed.append(stock)
             else:
-                logger.info("Success processed %s" % symbol[0])
-                self.succeeded.append(symbol)
+                logger.info("Success processed %s" % stock.symbol)
+                self.succeeded.append(stock)
             self.counter += 1
             if 0 == self.counter % 3:
                 self.outputDAM.commit()
-                logger.info("Processed %d/%d" %(self.counter, len(self.symbols)))
-
-if __name__ == '__main__':
-    dbpath = "sqlite:///data/stock.sqlite"
-    crawler = Crawler(dbpath, 2)
-    for symbol in ("002232", "300192", "600882"):
-        crawler.addSymbol(symbol, "20150101", "20150401")
-    crawler.start()
-    crawler.poll()
-    print("Sql database location: %s" % dbpath)
-    print("Succeeded: %s" % crawler.succeeded)
-    print("Failed: %s" % crawler.failed)
+                logger.info("Processed %d/%d" % (self.counter, len(self.stocks)))

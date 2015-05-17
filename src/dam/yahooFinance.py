@@ -4,13 +4,11 @@ Created on Dec 21, 2010
 @author: ppa
 
 Thanks to Corey Goldberg, this module is based http://www.goldb.org/ystockquote.html
-sample usage:
->>> import YahooFinance
->>> print YahooFinance.get_price('GOOG')
 529.46
 '''
-import urllib.request
+import urllib
 import traceback
+import datetime, time
 from model.stockObjects import Quote, ChinaStockSymbol
 from lib.errors import UfException, Errors
 
@@ -29,7 +27,7 @@ class YahooFinance(object):
     def __request(self, symbol, stat):
         try:
             url = 'http://finance.yahoo.com/d/quotes.csv?s=%s%s&f=%s' % (symbol, self.__chinaSymbolPrefix(symbol), stat)
-            return urllib.request.urlopen(url).read().strip().strip('"')
+            return urllib.urlopen(url).read().strip().strip('"')
         except IOError:
             raise UfException(Errors.NETWORK_ERROR, "Can't connect to Yahoo server")
         except BaseException:
@@ -72,26 +70,29 @@ class YahooFinance(object):
         Returns a nested list.
         """
         try:
-            start = str(start).replace('-', '')
-            end = str(end).replace('-', '')
+            _start = start.strftime('%Y%m%d')
+            _end = end.strftime('%Y%m%d')
             url = 'http://ichart.yahoo.com/table.csv?s=%s%s&' % (symbol, self.__chinaSymbolPrefix(symbol)) + \
-                'd=%s&' % str(int(end[4:6]) - 1) + \
-                'e=%s&' % str(int(end[6:8])) + \
-                'f=%s&' % str(int(end[0:4])) + \
+                'd=%s&' % str(int(_end[4:6]) - 1) + \
+                'e=%s&' % str(int(_end[6:8])) + \
+                'f=%s&' % str(int(_end[0:4])) + \
                 'g=d&' + \
-                'a=%s&' % str(int(start[4:6]) - 1) + \
-                'b=%s&' % str(int(start[6:8])) + \
-                'c=%s&' % str(int(start[0:4])) + \
+                'a=%s&' % str(int(_start[4:6]) - 1) + \
+                'b=%s&' % str(int(_start[6:8])) + \
+                'c=%s&' % str(int(_start[0:4])) + \
                 'ignore=.csv'
-            logger.debug("Retreiving stock data of %s from date %s - %s ..." %(symbol, start, end))
+            logger.debug("Retreiving stock data of %s from date %s - %s ..." %(symbol, _start, _end))
             logger.debug("url:%s" %url)
-            days = urllib.request.urlopen(url, timeout = 10).readlines()
+            days = urllib.urlopen(url).readlines()
             values = [day.decode('utf-8')[:-2].split(',') for day in days]
             # sample values:[['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Clos'], \
             #              ['2009-12-31', '112.77', '112.80', '111.39', '111.44', '90637900', '109.7']...]
             data = []
             for value in values[1:]:
-                data.append(Quote(value[0], value[1], value[2], value[3], value[4], value[5], value[6]))
+                if len(value) < 7:
+                    raise UfException(Errors.UNKNOWN_ERROR, "data error, value=%s" % value)
+                day = datetime.datetime.strptime(value[0], '%Y-%m-%d')
+                data.append(Quote(day, value[1], value[2], value[3], value[4], value[5], value[6]))
 
             dateValues = sorted(data, key = lambda q: q.time)
             return dateValues

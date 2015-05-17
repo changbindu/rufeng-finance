@@ -1,12 +1,13 @@
 import datetime
 from dam.DAMFactory import DAMFactory
+from model.stockObjects import Stock
 from lib.util import logger
 from crawler import Crawler
 
 class DataManager(object):
     def __init__(self, dbpath = "sqlite:///data/stock.sqlite"):
-        self.start = "20040101"
-        self.end = self.__dateToStr(datetime.datetime.now())
+        self.start = datetime.datetime.strptime("2004-01-01", '%Y-%m-%d')
+        self.end = datetime.datetime.now()
         self.dbpath = dbpath
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': self.dbpath})
         self.eastmoneyDAM = DAMFactory.createDAM('eastfinance')
@@ -14,20 +15,22 @@ class DataManager(object):
 
     def downloadAll(self, append=True):
         self.crawler.reset()
-        stocks = self.eastmoneyDAM.listSymbols()
-        symbols = ""
-        for stock in stocks:
-            symbols += "%s - %s\n" %(stock, stocks[stock])
-            self.crawler.addSymbol(stock, self.start, self.end)
-        logger.info("All stocks(%d): %s\n" %(len(stocks), symbols))
+        symbols = self.eastmoneyDAM.listSymbols()
+        symbol_str = ""
+        for symbol in symbols:
+            name = symbols[symbol]
+            symbol_str += "%s - %s\n" %(symbol, name)
+            stock = self.sqlDAM.readStock(symbol)
+            if stock is None:
+                stock = Stock(symbol, name, 0)
+                self.sqlDAM.writeStock(stock)
+            self.crawler.addStock(stock, self.start, self.end)
+        self.sqlDAM.commit();
+        logger.info("All stocks(%d): %s\n" %(len(symbols), symbol_str))
         self.crawler.start()
         self.crawler.poll()
 
-    @staticmethod
-    def __dateToStr(date):
-        return date.strftime('%Y%m%d')
-
-if __name__ == '__main__':
-    dataManager = DataManager()
-    print(" will download date from %s to %s" %(dataManager.start, dataManager.end))
-    dataManager.downloadAll()
+    def loadStock(self, symbol):
+        stock = self.sqlDAM.readStock(symbol)
+        stock.history = self.sqlDAM.readQuotes(stock.symbol, self.start, self.end)
+        return stock

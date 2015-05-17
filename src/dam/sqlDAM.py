@@ -4,12 +4,11 @@ Created on Nov 9, 2011
 @author: ppa
 '''
 from dam.baseDAM import BaseDAM
-from model.stockObjects import Quote, Tick, TupleQuote
-from lib.util import splitListEqually
+from model.stockObjects import Quote, Tick, Fundamental, Stock, Block
 import sys, os
 
-from sqlalchemy import Column, Integer, String, Float, Sequence, create_engine, and_
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import Column, Integer, String, Float, DateTime, Sequence, ForeignKey, create_engine, and_
+from sqlalchemy.orm import sessionmaker, scoped_session, relationship, joinedload
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -17,32 +16,29 @@ Base = declarative_base()
 import logging
 LOG = logging.getLogger()
 
-class FmSql(Base):
+class FundamentalSql(Base):
     __tablename__ = 'fundamental'
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key = True)
-    symbol = Column(String(12))
-    field = Column(String(50))
-    timeStamp = Column(String(50))
-    value = Column(Float)
+    stock_id = Column(Integer, primary_key = True)
+    sector = Column(String(12))
+    industry = Column(String(50))
+    summary = Column(String(50))
+    totalShare = Column(Integer)
+    tradableShare = Column(Integer)
+    priceEarning = Column(Float)
+    netAsset = Column(Float)
+    income = Column(Float)
+    netIncome = Column(Float)
 
-    def __init__(self, symbol, field, timeStamp, value):
+    def __init__(self, stock_id):
         ''' constructor '''
-        self.symbol = symbol
-        self.field = field
-        self.timeStamp = timeStamp
-        self.value = value
-
-    def __repr__(self):
-        return "<Fundamentals('%s', '%s', '%s', '%s')>" \
-           % (self.symbol, self.field, self.timeStamp, self.value)
+        self.stock_id = stock_id
 
 class QuoteSql(Base):
-    __tablename__ = 'quotes'
+    __tablename__ = 'quote'
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key = True)
-    symbol = Column(String(12))
-    time = Column(Integer)
+    stock_id = Column(Integer, primary_key = True)
+    time = Column(DateTime, primary_key = True)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
@@ -50,9 +46,9 @@ class QuoteSql(Base):
     volume = Column(Integer)
     adjClose = Column(Float) # price before the XD
 
-    def __init__(self, symbol, time, open, high, low, close, volume, adjClose):
+    def __init__(self, stock_id, time, open, high, low, close, volume, adjClose):
         ''' constructor '''
-        self.symbol = symbol
+        self.stock_id = stock_id
         self.time = time
         self.open = open
         self.high = high
@@ -63,23 +59,22 @@ class QuoteSql(Base):
 
     def __repr__(self):
         return "<Quote('%s', '%s','%s', '%s', '%s','%s', '%s', '%s')>" \
-           % (self.symbol, self.time, self.open, self.high, self.low, self.close, self.volume, self.adjClose)
+           % (self.stock_id, self.time, self.open, self.high, self.low, self.close, self.volume, self.adjClose)
 
 class TickSql(Base):
-    __tablename__ = 'ticks'
+    __tablename__ = 'tick'
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key = True)
-    symbol = Column(String(12))
-    time = Column(Integer)
+    stock_id = Column(Integer, primary_key = True)
+    time = Column(DateTime, primary_key = True)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
     close = Column(Float)
     volume = Column(Integer)
 
-    def __init__(self, symbol, time, open, high, low, close, volume):
+    def __init__(self, stock_id, time, open, high, low, close, volume):
         ''' constructor '''
-        self.symbol = symbol
+        self.stock_id = stock_id
         self.time = time
         self.open = open
         self.high = high
@@ -89,7 +84,21 @@ class TickSql(Base):
 
     def __repr__(self):
         return "<Tick('%s', '%s', '%s', '%s', '%s', '%s', '%s')>" \
-           % (self.symbol, self.time, self.open, self.high, self.low, self.close, self.volume)
+           % (self.stock_id, self.time, self.open, self.high, self.low, self.close, self.volume)
+
+class StockSql(Base):
+    __tablename__ = 'stock'
+
+    id = Column(Integer, primary_key = True)
+    symbol = Column(String(12), unique = True)
+    name = Column(String(20))
+    price = Column(Float)
+
+    def __init__(self, symbol, name, price):
+        ''' constructor '''
+        self.symbol = symbol
+        self.name = name
+        self.price = price
 
 class SqlDAM(BaseDAM):
     '''
@@ -99,10 +108,8 @@ class SqlDAM(BaseDAM):
         ''' constructor '''
         super(SqlDAM, self).__init__()
         self.echo = echo
-        self.first = True
         self.engine = None
-        self.ReadSession = None
-        self.WriteSession = None
+        self.readSession = None
         self.writeSession = None
 
     def setup(self, setting):
@@ -113,209 +120,58 @@ class SqlDAM(BaseDAM):
         if not os.path.exists(dir):
             os.makedirs(dir, exist_ok = True)
         self.engine = create_engine(setting['db'], echo = self.echo)
+        self.readSession = scoped_session(sessionmaker(bind = self.engine))
+        sessionMaker = sessionmaker(bind = self.engine)
+        self.writeSession = sessionMaker()
+        Base.metadata.create_all(self.engine, checkfirst = True)
 
-    def getReadSession(self):
-        ''' return scopted session '''
-        if self.ReadSession is None:
-            self.ReadSession = scoped_session(sessionmaker(bind = self.engine))
+    def __readStock(self, symbol):
+        try:
+            stocksql = self.readSession.query(StockSql).filter(and_(StockSql.symbol == symbol)).first()
+        finally:
+            self.readSession.remove()
 
-        return self.ReadSession
+        if stocksql is None:
+            return None
+        return stocksql
 
-    def getWriteSession(self):
-        ''' return unscope session, TODO, make it clear '''
-        if self.WriteSession is None:
-            self.WriteSession = sessionmaker(bind = self.engine)
-            self.writeSession = self.WriteSession()
+    def readStock(self, symbol):
+        stocksql = self.__readStock(symbol)
+        if stocksql is None:
+            return None
+        return Stock(stocksql.symbol, stocksql.name, stocksql.price)
 
-        return self.writeSession
+    def writeStock(self, stock):
+        ''' write quotes '''
+        self.writeSession.add(StockSql(stock.symbol, stock.name, stock.price))
 
-    def __sqlToQuote(self, row):
-        ''' convert row result to Quote '''
-        return Quote(row.time, row.open, row.high, row.low, row.close, row.volume, row.adjClose)
-
-    def __sqlToTupleQuote(self, row):
-        ''' convert row result to tuple Quote '''
-        #return TupleQuote(row.time, row.open, row.high, row.low, row.close, row.volume, row.adjClose)
-        #TODO -- remove type conversion, crawler should get the right type
-        return TupleQuote(row.time, row.close, int(row.volume), row.low, row.high)
-
-    def __sqlToTick(self, row):
-        ''' convert row result to Tick '''
-        return Tick(row.time, row.open, row.high, row.low, row.close, row.volume)
-
-    def __sqlToTupleTick(self, row):
-        ''' convert row result to tuple Tick '''
-        return Tick(row.time, row.open, row.high, row.low, row.close, row.volume)
-
-    def __tickToSql(self, tick):
-        ''' convert tick to TickSql '''
-        return TickSql(self.symbol, tick.time, tick.open, tick.high, tick.low, tick.close, tick.volume)
-
-    def __quoteToSql(self, quote):
-        ''' convert tick to QuoteSql '''
-        return QuoteSql(self.symbol, quote.time, quote.open, quote.high, quote.low, quote.close, quote.volume, quote.adjClose)
-
-    def readQuotes(self, start, end):
+    def readQuotes(self, symbol, start, end):
         ''' read quotes '''
         if end is None:
             end = sys.maxint
 
-        session = self.getReadSession()()
+        stockSql = self.__readStock(symbol)
         try:
-            rows = session.query(QuoteSql).filter(and_(QuoteSql.symbol == self.symbol,
-                                                            QuoteSql.time >= int(start),
-                                                            QuoteSql.time < int(end)))
+            rows = self.readSession.query(QuoteSql).filter(and_(QuoteSql.stock_id == stockSql.id,
+                                    QuoteSql.time >= start, QuoteSql.time < end))
         finally:
-            self.getReadSession.remove()
+            self.readSession.remove()
 
-        return [self.__sqlToQuote(row) for row in rows]
+        return [Quote(row.time, row.open, row.high, row.low, row.close, row.volume, row.adjClose) for row in rows]
 
-    def readTupleQuotes(self, start, end):
-        ''' read quotes as tuple '''
-        if end is None:
-            end = sys.maxint
-
-        session = self.getReadSession()()
-        try:
-            rows = session.query(QuoteSql).filter(and_(QuoteSql.symbol == self.symbol,
-                                                       QuoteSql.time >= int(start),
-                                                       QuoteSql.time < int(end)))
-        finally:
-            self.getReadSession().remove()
-
-        return [self.__sqlToTupleQuote(row) for row in rows]
-
-    def readBatchTupleQuotes(self, symbols, start, end):
-        '''
-        read batch quotes as tuple to save memory
-        '''
-        if end is None:
-            end = sys.maxint
-
-        ret = {}
-        session = self.getReadSession()()
-        try:
-            symbolChunks = splitListEqually(symbols, 100)
-            for chunk in symbolChunks:
-                rows = session.query(QuoteSql.symbol, QuoteSql.time, QuoteSql.close, QuoteSql.volume,
-                                     QuoteSql.low, QuoteSql.high).filter(and_(QuoteSql.symbol.in_(chunk),
-                                                                              QuoteSql.time >= int(start),
-                                                                              QuoteSql.time < int(end)))
-
-                for row in rows:
-                    if row.time not in ret:
-                        ret[row.time] = {}
-
-                    ret[row.time][row.symbol] = self.__sqlToTupleQuote(row)
-        finally:
-            self.getReadSession().remove()
-
-        return ret
-
-
-    def readTupleTicks(self, start, end):
-        ''' read ticks as tuple '''
-        if end is None:
-            end = sys.maxint
-
-        session = self.getReadSession()()
-        try:
-            rows = session.query(TickSql).filter(and_(TickSql.symbol == self.symbol,
-                                                      TickSql.time >= int(start),
-                                                      TickSql.time < int(end)))
-        finally:
-            self.getReadSession().remove()
-
-        return [self.__sqlToTupleTick(row) for row in rows]
-
-    def readTicks(self, start, end):
-        ''' read ticks '''
-        if end is None:
-            end = sys.maxint
-
-        session = self.getReadSession()()
-        try:
-            rows = session.query(TickSql).filter(and_(TickSql.symbol == self.symbol,
-                                                      TickSql.time >= int(start),
-                                                      TickSql.time < int(end)))
-        finally:
-            self.getReadSession().remove()
-
-        return [self.__sqlToTick(row) for row in rows]
-
-    def writeQuotes(self, quotes):
+    def writeQuotes(self, symbol, quotes):
         ''' write quotes '''
-        if self.first:
-            Base.metadata.create_all(self.engine, checkfirst = True)
-            self.first = False
-
-        session = self.getWriteSession()
-        session.add_all([self.__quoteToSql(quote) for quote in quotes])
-
-
-    def writeTicks(self, ticks):
-        ''' write ticks '''
-        if self.first:
-            Base.metadata.create_all(self.engine, checkfirst = True)
-            self.first = False
-
-        session = self.getWriteSession()
-        session.add_all([self.__tickToSql(tick) for tick in ticks])
+        stockSql = self.__readStock(symbol)
+        self.writeSession.add_all([QuoteSql(stockSql.id, quote.time, quote.open, quote.high, quote.low,
+                                quote.close, quote.volume, quote.adjClose) for quote in quotes])
 
     def commit(self):
         ''' commit changes '''
-        session = self.getWriteSession()
-        session.commit()
+        self.writeSession.commit()
 
-    def destruct(self):
+    def __del__(self):
         ''' destructor '''
-        if self.getWriteSession():
-            self.WriteSession.remove()
-            self.WriteSession = None
-            self.writeSession = None
-        if self.getReadSession():
-            self.getReadSession().remove()
-            self.ReadSession = None
-
-
-    '''
-    read/write fundamentals
-    TODO: when doing fundamentals and quote/tick operation together,
-    things may mess up
-    '''
-    def writeFundamental(self, keyTimeValueDict):
-        ''' write fundamental '''
-        if self.first:
-            Base.metadata.create_all(self.__getEngine(), checkfirst = True)
-            self.first = False
-
-        sqls = self._fundamentalToSqls(keyTimeValueDict)
-        session = self.Session()
-        try:
-            session.add_all(sqls)
-        finally:
-            self.Session.remove()
-
-    def readFundamental(self):
-        ''' read fundamental '''
-        rows = self.__getSession().query(FmSql).filter(and_(FmSql.symbol == self.symbol))
-        return self._sqlToFundamental(rows)
-
-    def _sqlToFundamental(self, rows):
-        keyTimeValueDict = {}
-        for row in rows:
-            if row.field not in keyTimeValueDict:
-                keyTimeValueDict[row.field] = {}
-
-            keyTimeValueDict[row.field][row.timeStamp] = row.value
-
-        return keyTimeValueDict
-
-    def _fundamentalToSqls(self, keyTimeValueDict):
-        ''' convert fundament dict to sqls '''
-        sqls = []
-        for key, timeValues in keyTimeValueDict.iteritems():
-            for timeStamp, value in timeValues.iteritems():
-                sqls.append(FmSql(self.symbol, key, timeStamp, value))
-
-        return sqls
+        if self.readSession:
+            self.readSession.close()
+        if self.writeSession:
+            self.writeSession.close()

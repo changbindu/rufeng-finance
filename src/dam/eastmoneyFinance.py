@@ -4,7 +4,7 @@ Created on Dec 21, 2010
 @author: changbin
 '''
 from bs4 import BeautifulSoup
-import urllib.request
+import urllib
 import re
 
 from model.stockObjects import ChinaStockSymbol
@@ -17,7 +17,7 @@ class EastmoneyFinance(object):
         """
         stocks = {}
         url = 'http://quote.eastmoney.com/stocklist.html'
-        html = urllib.request.urlopen(url, timeout = 10).read()
+        html = urllib.urlopen(url).read()
         html = html.decode('gb2312', 'replace')
         soup = BeautifulSoup(html)
         for item in soup.find_all("a", href=re.compile("^http://quote.eastmoney.com/(sh|sz)\d{6}\.html"), target="_blank"):

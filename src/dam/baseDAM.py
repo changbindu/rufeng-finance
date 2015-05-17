@@ -12,58 +12,43 @@ class BaseDAM(object):
 
     def __init__(self):
         ''' constructor '''
-        self.__symbol = None
+        pass
 
     def listSymbols(self):
         ''' list all stocks in market, (symbol : name) '''
         raise UfException(Errors.UNDEFINED_METHOD, "listSymbols method is not defined")
 
-    def readQuotes(self, start, end):
+    def readStock(self, symbol):
+        ''' read quotes '''
+        raise UfException(Errors.UNDEFINED_METHOD, "readStock method is not defined")
+
+    def writeStock(self, Stock):
+        ''' read quotes '''
+        raise UfException(Errors.UNDEFINED_METHOD, "writeStock method is not defined")
+
+    def readQuotes(self, symbol, start, end):
         ''' read quotes '''
         raise UfException(Errors.UNDEFINED_METHOD, "readQuotes method is not defined")
 
-    def readTupleQuotes(self, start, end):
-        ''' read quotes as tuple to save memory '''
-        raise UfException(Errors.UNDEFINED_METHOD, "readTupleQuotes method is not defined")
-
-    def readBatchTupleQuotes(self, symbols, start, end):
-        '''
-        TODO: revisit API for batch and single symbol operation
-        read batch quotes as tuple to save memory
-        '''
-        raise UfException(Errors.UNDEFINED_METHOD, "readBatchTupleQuotes method is not defined")
-
-    def writeQuotes(self, quotes):
+    def writeQuotes(self, symbol, quotes):
         ''' write quotes '''
         raise UfException(Errors.UNDEFINED_METHOD, "writeQuotes method is not defined")
 
-    def readTicks(self, start, end):
+    def readTicks(self, symbol, start, end):
         ''' read ticks '''
         raise UfException(Errors.UNDEFINED_METHOD, "readTicks method is not defined")
 
-    def writeTicks(self, ticks):
+    def writeTicks(self, symbol, ticks):
         ''' read quotes '''
         raise UfException(Errors.UNDEFINED_METHOD, "writeTicks method is not defined")
 
-    def readFundamental(self):
+    def readFundamental(self, symbol):
         ''' read fundamental '''
         raise UfException(Errors.UNDEFINED_METHOD, "readFundamental method is not defined")
 
-    def writeFundamental(self, keyTimeValueDict):
+    def writeFundamental(self, symbol, Fundamental):
         ''' write fundamental '''
         raise UfException(Errors.UNDEFINED_METHOD, "writeFundamental method is not defined")
-
-    def setSymbol(self, symbol):
-        ''' set symbol '''
-        self.__symbol = symbol
-
-    def destruct(self):
-        ''' destructor '''
-        pass
-
-    def __getSymbol(self):
-        ''' get symbol '''
-        return self.__symbol
 
     def setup(self, settings):
         ''' setup dam '''
@@ -72,5 +57,3 @@ class BaseDAM(object):
     def commit(self):
         ''' commit write changes '''
         pass
-
-    symbol = property(__getSymbol, setSymbol)

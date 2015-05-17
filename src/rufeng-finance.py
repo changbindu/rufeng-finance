@@ -1,9 +1,11 @@
+#coding=utf-8
 __author__ = 'changbi'
 
 from optparse import OptionParser
 from dataManager import DataManager
 from selectEngine import SelectEngine
 from lib.util import logger
+from lib.stockPlot import StockPlot
 
 class RufengFinance(object):
     def __init__(self):
@@ -25,6 +27,9 @@ class RufengFinance(object):
         parser.add_option("-s", "--selector",
                   default="all", dest = "selector",
                   help="selectors: all, trend, macd, or hot [default: %default]")
+        parser.add_option("-p", "--plot",
+                  action="store_true", dest="plot", default=False,
+                  help="plot stock diagram")
 
         (options, args) = parser.parse_args()
         if len(args) < 0:
@@ -35,8 +40,15 @@ class RufengFinance(object):
         if options.download:
             logger.info("download data ...")
             self.dataManager.downloadAll(options.append)
+        if options.plot:
+            logger.info("show diagram for stock %s ..." % args[0])
+            stock = self.dataManager.loadStock(args[0])
+            plot = StockPlot(stock)
+            plot.plot(False)
 
         return 0
 
 if __name__ == '__main__':
-    exit(RufengFinance().main())
+    ret = RufengFinance().main()
+    logger.info("exiting...")
+    exit(ret)
