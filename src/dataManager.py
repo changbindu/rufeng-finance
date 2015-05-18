@@ -27,7 +27,7 @@ class DataManager(object):
                 self.sqlDAM.writeStock(stock_l)
             else:
                 history = self.sqlDAM.readQuotes(stock.symbol, self.history_start, end)
-                if history is not None:
+                if len(history) > 0:
                     start = history[-1].time + datetime.timedelta(days=1)
                     if (end - start).days < 1:
                         continue

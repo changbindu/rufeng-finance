@@ -21,4 +21,4 @@ class EastmoneyDAM(BaseDAM):
     def readAllStocks(self):
         ''' list all stocks in market '''
         symbols = self.__ef.getAllStockSymbols()
-        return [Stock(s, n, 0.0) for s, n in symbols]
+        return [Stock(s, symbols[s], 0.0) for s in symbols]
