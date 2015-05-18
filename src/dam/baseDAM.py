@@ -14,7 +14,7 @@ class BaseDAM(object):
         ''' constructor '''
         pass
 
-    def listSymbols(self):
+    def readAllStocks(self):
         ''' list all stocks in market, (symbol : name) '''
         raise UfException(Errors.UNDEFINED_METHOD, "listSymbols method is not defined")
 

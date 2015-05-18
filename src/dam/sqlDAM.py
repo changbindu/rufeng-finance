@@ -125,6 +125,16 @@ class SqlDAM(BaseDAM):
         self.writeSession = sessionMaker()
         Base.metadata.create_all(self.engine, checkfirst = True)
 
+    def readAllStocks(self):
+        try:
+            rows = self.readSession.query(StockSql)
+        finally:
+            self.readSession.remove()
+
+        if rows is None:
+            return None
+        return [Stock(row.symbol, row.name, row.price) for row in rows]
+
     def __readStock(self, symbol):
         try:
             stocksql = self.readSession.query(StockSql).filter(and_(StockSql.symbol == symbol)).first()

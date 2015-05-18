@@ -5,6 +5,7 @@ Created on Nov 9, 2011
 '''
 from dam.baseDAM import BaseDAM
 from dam.eastmoneyFinance import EastmoneyFinance
+from model.stockObjects import Stock
 
 import logging
 LOG = logging.getLogger()
@@ -17,6 +18,7 @@ class EastmoneyDAM(BaseDAM):
         super(EastmoneyDAM, self).__init__()
         self.__ef = EastmoneyFinance()
 
-    def listSymbols(self):
+    def readAllStocks(self):
         ''' list all stocks in market '''
-        return self.__ef.getAllStockSymbols()
+        symbols = self.__ef.getAllStockSymbols()
+        return [Stock(s, n, 0.0) for s, n in symbols]

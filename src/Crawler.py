@@ -19,8 +19,8 @@ class Crawler(object):
     def __init__(self, dbpath, poolsize = 5):
         ''' constructor '''
         self.stocks = []
-        self.outputDAM = DAMFactory.createDAM("sql", {'db': dbpath})
-        self.inputDAM = DAMFactory.createDAM("yahoo")
+        self.sqlDAM = DAMFactory.createDAM("sql", {'db': dbpath})
+        self.yahooDAM = DAMFactory.createDAM("yahoo")
         self.poolsize = poolsize
         self.readLock = Lock()
         self.writeLock = Lock()
@@ -61,7 +61,7 @@ class Crawler(object):
             #try several times since it may fail
             while failCount < MAX_TRY:
                 try:
-                    quotes = self.inputDAM.readQuotes(stock.symbol, start, end)
+                    quotes = self.yahooDAM.readQuotes(stock.symbol, start, end)
                 except BaseException as excp:
                     failCount += 1
                     lastExcp = excp
@@ -75,7 +75,7 @@ class Crawler(object):
                 raise BaseException("Can't retrieve historical data %s" % lastExcp)
 
         with self.writeLock: #dam is not thread safe
-            self.outputDAM.writeQuotes(stock.symbol, quotes)
+            self.sqlDAM.writeQuotes(stock.symbol, quotes)
 
     def __getAndSaveSymbols(self):
         ''' get and save data '''
@@ -99,5 +99,5 @@ class Crawler(object):
                 self.succeeded.append(stock)
             self.counter += 1
             if 0 == self.counter % 3:
-                self.outputDAM.commit()
+                self.sqlDAM.commit()
                 logger.info("Processed %d/%d" % (self.counter, len(self.stocks)))
