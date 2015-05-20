@@ -10,12 +10,14 @@ class DataManager(object):
         self.dbpath = dbpath
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': self.dbpath})
         self.eastmoneyDAM = DAMFactory.createDAM('eastfinance')
-        self.crawler = Crawler(self.dbpath)
 
-    def downloadAll(self, append=True):
-        self.crawler.reset()
-        logger.info("starting crawler in %s mode" % ("append" if append else "overwrite"))
-        stocks = self.eastmoneyDAM.readAllStocks()
+    def downloadAll(self, localOnly=False, append=True, threads=5):
+        crawler = Crawler(self.dbpath, threads)
+        crawler.reset()
+        if localOnly:
+            stocks = self.sqlDAM.readAllStocks()
+        else:
+            stocks = self.eastmoneyDAM.readAllStocks()
         symbol_str = ""
         for stock in stocks:
             symbol_str += "%s - %s\n" %(stock.symbol, stock.name)
@@ -26,16 +28,15 @@ class DataManager(object):
                 stock_l = Stock(stock.symbol, stock.name, 0)
                 self.sqlDAM.writeStock(stock_l)
             else:
-                history = self.sqlDAM.readQuotes(stock.symbol, self.history_start, end)
-                if history is not None:
-                    start = history[-1].time + datetime.timedelta(days=1)
-                    if (end - start).days < 1:
-                        continue
-            self.crawler.addStock(stock_l, start, end)
+                if (stock.lastUpdate is not None) and (end - stock.lastUpdate).days < 1:
+                    continue
+            crawler.addStock(stock_l, start, end)
+        # commit to create local new stock objects
         self.sqlDAM.commit()
         logger.info("All stocks(%d): %s\n" % (len(stocks), symbol_str))
-        self.crawler.start()
-        self.crawler.poll()
+        logger.info("starting crawler in %s mode with %d threads" % (("append" if append else "overwrite"), threads))
+        crawler.start()
+        crawler.poll()
 
     def loadAllStocks(self):
         return self.sqlDAM.readAllStocks()

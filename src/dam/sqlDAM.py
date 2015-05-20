@@ -93,6 +93,7 @@ class StockSql(Base):
     symbol = Column(String(12), unique = True)
     name = Column(String(20))
     price = Column(Float)
+    lastUpdate = Column(DateTime)
 
     def __init__(self, symbol, name, price):
         ''' constructor '''

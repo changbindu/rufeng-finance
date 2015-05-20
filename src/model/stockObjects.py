@@ -85,6 +85,7 @@ class Stock(object):
         self.price = price
         self.fundamental = None
         self.history = None
+        self.lastUpdate = None
 
 class Block(Stock):
     ''' stock bock '''

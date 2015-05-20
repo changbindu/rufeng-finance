@@ -7,7 +7,7 @@ from dam.DAMFactory import DAMFactory
 from model.stockObjects import Tick, Quote, Stock
 from threading import Thread
 from threading import Lock
-import time
+import time, datetime
 import traceback
 
 from lib.util import logger
@@ -41,7 +41,7 @@ class Crawler(object):
     def start(self):
         if (len(self.threads) == 0):
             for i in range(0, self.poolsize):
-                thread = Thread(name = "CrawlerThread%d" %i, target = self.__getAndSaveSymbols())
+                thread = Thread(name = "CrawlerThread%d" %i, target = self.__getAndSaveQuotes())
                 thread.daemon = True
                 self.threads.append(thread)
         for t in self.threads:
@@ -53,7 +53,7 @@ class Crawler(object):
             if t.is_alive():
                 logger.warning("Thread %s timeout" %t.name)
 
-    def __getSaveOneSymbol(self, stock, start, end):
+    def __getSaveOneStockQuotes(self, stock, start, end):
         ''' get and save data for one symbol '''
         lastExcp = None
         with self.readLock: #dam is not thread safe
@@ -73,11 +73,9 @@ class Crawler(object):
 
             if failCount >= MAX_TRY:
                 raise BaseException("Can't retrieve historical data %s" % lastExcp)
+        return quotes
 
-        with self.writeLock: #dam is not thread safe
-            self.sqlDAM.writeQuotes(stock.symbol, quotes)
-
-    def __getAndSaveSymbols(self):
+    def __getAndSaveQuotes(self):
         ''' get and save data '''
         self.counter = 0
         while self.counter < len(self.stocks):
@@ -85,7 +83,7 @@ class Crawler(object):
             start = self.stocks[self.counter][1]
             end = self.stocks[self.counter][2]
             try:
-                self.__getSaveOneSymbol(stock, start, end)
+                quotes = self.__getSaveOneStockQuotes(stock, start, end)
             except KeyboardInterrupt as excp:
                 logger.error("Interrupted while processing %s: %s" % (stock.symbol, excp))
                 self.failed.append(stock)
@@ -96,6 +94,11 @@ class Crawler(object):
                 self.failed.append(stock)
             else:
                 logger.info("Success processed %s" % stock.symbol)
+                with self.writeLock: #dam is not thread safe
+                    self.sqlDAM.writeQuotes(stock.symbol, quotes)
+                    stock.price = quotes[-1].close
+                    stock.lastUpdate = datetime.datetime.now()
+                    self.sqlDAM.writeStock(stock)
                 self.succeeded.append(stock)
             self.counter += 1
             if 0 == self.counter % 3:
