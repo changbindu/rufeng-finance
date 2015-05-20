@@ -15,6 +15,7 @@ class DataManager(object):
         crawler = Crawler(self.dbpath, threads)
         crawler.reset()
         if localOnly:
+            logger.info("only update local stocks")
             stocks = self.sqlDAM.readAllStocks()
         else:
             stocks = self.eastmoneyDAM.readAllStocks()
@@ -37,7 +38,7 @@ class DataManager(object):
         # commit to create local new stock objects
         self.sqlDAM.commit()
         if len(crawler.stocks) > 0:
-            logger.info("All stocks to update(%d): %s\n" % (len(crawler.stocks), symbol_str))
+            logger.info("All stocks to update(%d): \n%s" % (len(crawler.stocks), symbol_str))
             logger.info("starting crawler in %s mode with %d threads" % (("append" if append else "overwrite"), threads))
             crawler.start()
             crawler.poll()

@@ -22,7 +22,6 @@ class Crawler(object):
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': dbpath})
         self.yahooDAM = DAMFactory.createDAM("yahoo")
         self.poolsize = poolsize
-        self.readLock = Lock()
         self.writeLock = Lock()
         self.failed = []
         self.succeeded = []
@@ -39,9 +38,9 @@ class Crawler(object):
         self.counter = 0
 
     def start(self):
-        if (len(self.threads) == 0):
+        if len(self.threads) == 0:
             for i in range(0, self.poolsize):
-                thread = Thread(name = "CrawlerThread%d" %i, target = self.__getAndSaveQuotes())
+                thread = Thread(name = "CrawlerThread%d" %i, target = self.__getAndSaveQuotes)
                 thread.daemon = True
                 self.threads.append(thread)
         for t in self.threads:
@@ -56,20 +55,19 @@ class Crawler(object):
     def __getSaveOneStockQuotes(self, stock, start, end):
         ''' get and save data for one symbol '''
         lastExcp = None
-        with self.readLock: #dam is not thread safe
-            failCount = 0
-            #try several times since it may fail
-            while failCount < MAX_TRY:
-                try:
-                    quotes = self.yahooDAM.readQuotes(stock.symbol, start, end)
-                except BaseException as excp:
-                    failCount += 1
-                    lastExcp = excp
-                    logger.warning("Failed, %s: %s" % (excp, traceback.format_exc()))
-                    logger.info("Retry in 1 second")
-                    time.sleep(1)
-                else:
-                    break
+        failCount = 0
+        #try several times since it may fail
+        while failCount < MAX_TRY:
+            try:
+                quotes = self.yahooDAM.readQuotes(stock.symbol, start, end)
+            except BaseException as excp:
+                failCount += 1
+                lastExcp = excp
+                logger.warning("Failed, %s: %s" % (excp, traceback.format_exc()))
+                logger.info("Retry in 1 second")
+                time.sleep(1)
+            else:
+                break
 
             if failCount >= MAX_TRY:
                 raise BaseException("Can't retrieve historical data %s" % lastExcp)
@@ -99,8 +97,10 @@ class Crawler(object):
                     stock.price = quotes[-1].close
                     stock.lastUpdate = datetime.datetime.now()
                     self.sqlDAM.writeStock(stock)
+
+                    self.counter += 1
+                    if 0 == self.counter % (self.poolsize if self.poolsize < 20 else 20) \
+                       or self.counter == len(self.stocks):
+                        self.sqlDAM.commit()
+                        logger.info("Processed %d/%d" % (self.counter, len(self.stocks)))
                 self.succeeded.append(stock)
-            self.counter += 1
-            if 0 == self.counter % 3:
-                self.sqlDAM.commit()
-                logger.info("Processed %d/%d" % (self.counter, len(self.stocks)))
