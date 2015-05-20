@@ -119,7 +119,7 @@ class SqlDAM(BaseDAM):
             raise Exception("db not specified in setting")
         dir = os.path.split(os.path.realpath(setting['db'].strip("sqlite:///")))[0]
         if not os.path.exists(dir):
-            os.makedirs(dir, exist_ok = True)
+            os.makedirs(dir)
         self.engine = create_engine(setting['db'], echo = self.echo)
         self.readSession = scoped_session(sessionmaker(bind = self.engine))
         sessionMaker = sessionmaker(bind = self.engine)
@@ -132,8 +132,6 @@ class SqlDAM(BaseDAM):
         finally:
             self.readSession.remove()
 
-        if rows is None:
-            return None
         return [Stock(row.symbol, row.name, row.price) for row in rows]
 
     def __readStock(self, symbol):

@@ -20,7 +20,6 @@ class DataManager(object):
             stocks = self.eastmoneyDAM.readAllStocks()
         symbol_str = ""
         for stock in stocks:
-            symbol_str += "%s - %s\n" %(stock.symbol, stock.name)
             start = self.history_start
             end = datetime.datetime.now()
             stock_l = self.sqlDAM.readStock(stock.symbol)
@@ -28,15 +27,22 @@ class DataManager(object):
                 stock_l = Stock(stock.symbol, stock.name, 0)
                 self.sqlDAM.writeStock(stock_l)
             else:
-                if (stock.lastUpdate is not None) and (end - stock.lastUpdate).days < 1:
-                    continue
+                if stock.lastUpdate is not None:
+                    if (end - stock.lastUpdate).days < 1:
+                        continue
+                    else:
+                        start = stock.lastUpdate
+            symbol_str += "%s - %s\n" %(stock.symbol, stock.name)
             crawler.addStock(stock_l, start, end)
         # commit to create local new stock objects
         self.sqlDAM.commit()
-        logger.info("All stocks(%d): %s\n" % (len(stocks), symbol_str))
-        logger.info("starting crawler in %s mode with %d threads" % (("append" if append else "overwrite"), threads))
-        crawler.start()
-        crawler.poll()
+        if len(crawler.stocks) > 0:
+            logger.info("All stocks to update(%d): %s\n" % (len(crawler.stocks), symbol_str))
+            logger.info("starting crawler in %s mode with %d threads" % (("append" if append else "overwrite"), threads))
+            crawler.start()
+            crawler.poll()
+        else:
+            logger.info("no stock needs to update")
 
     def loadAllStocks(self):
         return self.sqlDAM.readAllStocks()
