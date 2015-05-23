@@ -27,6 +27,7 @@ class YahooFinance(object):
     def __request(self, symbol, stat):
         try:
             url = 'http://finance.yahoo.com/d/quotes.csv?s=%s%s&f=%s' % (symbol, self.__chinaSymbolPrefix(symbol), stat)
+            logger.debug("querying finance.yahoo.com...")
             return urllib.urlopen(url).read().strip().strip('"')
         except IOError:
             raise UfException(Errors.NETWORK_ERROR, "Can't connect to Yahoo server")
@@ -81,9 +82,11 @@ class YahooFinance(object):
                 'b=%s&' % str(int(_start[6:8])) + \
                 'c=%s&' % str(int(_start[0:4])) + \
                 'ignore=.csv'
-            logger.debug("Retreiving stock data of %s from date %s - %s ..." %(symbol, _start, _end))
-            logger.debug("url:%s" %url)
-            days = urllib.urlopen(url).readlines()
+            logger.debug("querying finance.yahoo.com...")
+            resp = urllib.urlopen(url)
+            if resp.getcode() == 404:
+                raise UfException(Errors.UNKNOWN_404_ERROR, "data error, not found")
+            days = resp.readlines()
             values = [day.decode('utf-8')[:-2].split(',') for day in days]
             # sample values:[['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Clos'], \
             #              ['2009-12-31', '112.77', '112.80', '111.39', '111.44', '90637900', '109.7']...]
@@ -100,6 +103,6 @@ class YahooFinance(object):
         except IOError:
             raise UfException(Errors.NETWORK_ERROR, "Can't connect to Yahoo server")
         except BaseException:
-            raise UfException(Errors.UNKNOWN_ERROR, "Unknown Error in YahooFinance.getHistoricalPrices %s" % traceback.format_exc())
+            raise UfException(Errors.UNKNOWN_ERROR, "Unknown Error in YahooFinance.getHistoricalPrices")
         #sample output
         #[stockDaylyData(date='2010-01-04, open='112.37', high='113.39', low='111.51', close='113.33', volume='118944600', adjClose='111.6'))...]

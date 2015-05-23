@@ -79,13 +79,13 @@ class Quote(object):
 
 class Stock(object):
     ''' stock class'''
-    def __init__(self, symbol, name, price):
+    def __init__(self, symbol, name, price, lastUpdate=None):
         self.symbol = symbol
         self.name = name
         self.price = price
         self.fundamental = None
         self.history = None
-        self.lastUpdate = None
+        self.lastUpdate = lastUpdate
 
 class Block(Stock):
     ''' stock bock '''

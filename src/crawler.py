@@ -7,9 +7,11 @@ from dam.DAMFactory import DAMFactory
 from model.stockObjects import Tick, Quote, Stock
 from threading import Thread
 from threading import Lock
+from Queue import Queue
 import time, datetime
 import traceback
 
+from lib.errors import Errors, UfException
 from lib.util import logger
 
 MAX_TRY = 3
@@ -18,7 +20,7 @@ class Crawler(object):
     ''' collect quotes/ticks for a list of symbol '''
     def __init__(self, dbpath, poolsize = 5):
         ''' constructor '''
-        self.stocks = []
+        self.stockQueue = Queue()
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': dbpath})
         self.yahooDAM = DAMFactory.createDAM("yahoo")
         self.poolsize = poolsize
@@ -29,13 +31,14 @@ class Crawler(object):
         self.counter = 0
 
     def addStock(self, stock, start, end):
-        self.stocks.append((stock, start, end))
+        self.stockQueue.put((stock, start, end))
 
     def reset(self):
         self.symbols = []
         self.succeeded = []
         self.failed = []
         self.counter = 0
+        self.poll()
 
     def start(self):
         if len(self.threads) == 0:
@@ -51,11 +54,13 @@ class Crawler(object):
             t.join(timeout) # no need to block, because thread should complete at last
             if t.is_alive():
                 logger.warning("Thread %s timeout" %t.name)
+        self.sqlDAM.commit()
 
     def __getSaveOneStockQuotes(self, stock, start, end):
         ''' get and save data for one symbol '''
         lastExcp = None
         failCount = 0
+        quotes = None
         #try several times since it may fail
         while failCount < MAX_TRY:
             try:
@@ -63,23 +68,27 @@ class Crawler(object):
             except BaseException as excp:
                 failCount += 1
                 lastExcp = excp
-                logger.warning("Failed, %s: %s" % (excp, traceback.format_exc()))
+                if isinstance(excp, UfException) and excp.getCode == Errors.NETWORK_404_ERROR:
+                    logger.warning("Failed, stock %s not found" % stock.symbol)
+                    break
+                else:
+                    logger.warning("Failed, %s: %s" % (excp, traceback.format_exc()))
                 logger.info("Retry in 1 second")
                 time.sleep(1)
             else:
                 break
 
-            if failCount >= MAX_TRY:
+            if failCount >= MAX_TRY or len(quotes) == 0:
                 raise BaseException("Can't retrieve historical data %s" % lastExcp)
         return quotes
 
     def __getAndSaveQuotes(self):
         ''' get and save data '''
-        self.counter = 0
-        while self.counter < len(self.stocks):
-            stock = self.stocks[self.counter][0]
-            start = self.stocks[self.counter][1]
-            end = self.stocks[self.counter][2]
+        while not self.stockQueue.empty():
+            item = self.stockQueue.get_nowait()
+            stock = item[0]
+            start = item[1]
+            end = item[2]
             try:
                 quotes = self.__getSaveOneStockQuotes(stock, start, end)
             except KeyboardInterrupt as excp:
@@ -99,8 +108,9 @@ class Crawler(object):
                     self.sqlDAM.writeStock(stock)
 
                     self.counter += 1
-                    if 0 == self.counter % (self.poolsize if self.poolsize < 20 else 20) \
-                       or self.counter == len(self.stocks):
+                    if 0 == self.counter % (self.poolsize if self.poolsize < 20 else 20):
                         self.sqlDAM.commit()
-                        logger.info("Processed %d/%d" % (self.counter, len(self.stocks)))
+                        logger.info("Processed %d, %d remain" % (self.counter, self.stockQueue.qsize()))
                 self.succeeded.append(stock)
+            finally:
+                self.stockQueue.task_done()

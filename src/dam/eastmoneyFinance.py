@@ -8,6 +8,7 @@ import urllib
 import re
 
 from model.stockObjects import ChinaStockSymbol
+from lib.util import logger
 
 class EastmoneyFinance(object):
     def getAllStockSymbols(self):
@@ -17,6 +18,7 @@ class EastmoneyFinance(object):
         """
         stocks = {}
         url = 'http://quote.eastmoney.com/stocklist.html'
+        logger.debug("querying quote.eastmoney.com...")
         html = urllib.urlopen(url).read()
         html = html.decode('gb2312', 'replace')
         soup = BeautifulSoup(html)

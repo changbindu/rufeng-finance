@@ -95,11 +95,15 @@ class StockSql(Base):
     price = Column(Float)
     lastUpdate = Column(DateTime)
 
-    def __init__(self, symbol, name, price):
+    def __init__(self, symbol, name, price, lastUpdate=None):
         ''' constructor '''
         self.symbol = symbol
         self.name = name
         self.price = price
+        self.lastUpdate = lastUpdate
+
+    def toDict(self):
+        return {'symbol':self.symbol, 'name':self.name, 'price':self.price, 'lastUpdate':self.lastUpdate}
 
 class SqlDAM(BaseDAM):
     '''
@@ -120,7 +124,7 @@ class SqlDAM(BaseDAM):
         dir = os.path.split(os.path.realpath(setting['db'].strip("sqlite:///")))[0]
         if not os.path.exists(dir):
             os.makedirs(dir)
-        self.engine = create_engine(setting['db'], echo = self.echo)
+        self.engine = create_engine(setting['db'], echo = self.echo, connect_args={"check_same_thread":False})
         self.readSession = scoped_session(sessionmaker(bind = self.engine))
         sessionMaker = sessionmaker(bind = self.engine)
         self.writeSession = sessionMaker()
@@ -148,11 +152,15 @@ class SqlDAM(BaseDAM):
         stocksql = self.__readStock(symbol)
         if stocksql is None:
             return None
-        return Stock(stocksql.symbol, stocksql.name, stocksql.price)
+        return Stock(stocksql.symbol, stocksql.name, stocksql.price, stocksql.lastUpdate)
 
     def writeStock(self, stock):
         ''' write quotes '''
-        self.writeSession.add(StockSql(stock.symbol, stock.name, stock.price))
+        stockSql = StockSql(stock.symbol, stock.name, stock.price, stock.lastUpdate)
+        if self.__readStock(stock.symbol) is None:
+            self.writeSession.add(stockSql)
+        else:
+            self.writeSession.query(StockSql).filter(and_(StockSql.symbol == stock.symbol)).update(stockSql.toDict())
 
     def readQuotes(self, symbol, start, end):
         ''' read quotes '''
