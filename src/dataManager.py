@@ -5,9 +5,9 @@ from lib.util import logger
 from crawler import Crawler
 
 class DataManager(object):
-    def __init__(self, dbpath = "sqlite:///data/stock.sqlite"):
+    def __init__(self, dbpath = "data/stock.sqlite"):
         self.history_start = datetime.datetime.strptime("2004-01-01", '%Y-%m-%d')
-        self.dbpath = dbpath
+        self.dbpath = "sqlite:///" + dbpath
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': self.dbpath})
         self.eastmoneyDAM = DAMFactory.createDAM('eastfinance')
 

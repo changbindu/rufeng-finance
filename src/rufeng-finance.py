@@ -13,8 +13,8 @@ sys.setdefaultencoding( "utf-8" )
 
 class RufengFinance(object):
     def __init__(self):
-        self.dataManager = DataManager()
-        self.selectEngine = SelectEngine()
+        self.dataManager = None
+        self.selectEngine = None
         self.config = None
 
     def main(self):
@@ -34,8 +34,11 @@ class RufengFinance(object):
         parser.add_option("-a", "--append",
                   action="store_true", dest="append", default=True,
                   help="download data by append [default]")
-        parser.add_option("-c", "--config",
+        parser.add_option("--config",
                   metavar="FILE", help="specific config file"),
+        parser.add_option("--dbfile",
+                  metavar="FILE", dest="dbfile", default="data/stock.sqlite",
+                  help="specific database file [default: data/stock.sqlite]"),
         parser.add_option("-s", "--selector",
                   default="all", dest = "selector",
                   help="selectors: all, trend, macd, or hot [default: %default]")
@@ -49,6 +52,8 @@ class RufengFinance(object):
 
         if options.config:
             logger.info("using config %s" % options.config)
+        self.dataManager = DataManager(dbpath=options.dbfile)
+        self.selectEngine = SelectEngine()
 
         if command == "download":
             logger.info("download data ...")
