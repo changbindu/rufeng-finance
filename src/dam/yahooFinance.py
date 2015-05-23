@@ -82,7 +82,7 @@ class YahooFinance(object):
                 'b=%s&' % str(int(_start[6:8])) + \
                 'c=%s&' % str(int(_start[0:4])) + \
                 'ignore=.csv'
-            logger.debug("querying finance.yahoo.com...")
+            logger.debug("querying finance.yahoo.com for stock %s..." % symbol)
             resp = urllib.urlopen(url)
             if resp.getcode() == 404:
                 raise UfException(Errors.UNKNOWN_404_ERROR, "data error, not found")

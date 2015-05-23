@@ -56,6 +56,9 @@ class Crawler(object):
                 logger.warning("Thread %s timeout" %t.name)
         self.sqlDAM.commit()
 
+    def getRemainCount(self):
+        return self.stockQueue.qsize()
+
     def __getSaveOneStockQuotes(self, stock, start, end):
         ''' get and save data for one symbol '''
         lastExcp = None

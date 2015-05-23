@@ -18,7 +18,7 @@ class EastmoneyFinance(object):
         """
         stocks = {}
         url = 'http://quote.eastmoney.com/stocklist.html'
-        logger.debug("querying quote.eastmoney.com...")
+        logger.debug("querying quote.eastmoney.com for full stock list...")
         html = urllib.urlopen(url).read()
         html = html.decode('gb2312', 'replace')
         soup = BeautifulSoup(html)

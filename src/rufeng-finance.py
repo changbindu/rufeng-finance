@@ -48,7 +48,7 @@ class RufengFinance(object):
             parser.error("incorrect number of arguments, missing cmd")
             return -1
         command = args[0]
-        args = args[1:] if len(args) > 1 else ()
+        cmd_args = args[1:] if len(args) > 1 else ()
 
         if options.config:
             logger.info("using config %s" % options.config)
@@ -57,12 +57,15 @@ class RufengFinance(object):
 
         if command == "download":
             logger.info("download data ...")
-            self.dataManager.downloadAll(localOnly=options.local, append=options.append, threads=options.threads)
+            if len(cmd_args) == 0:
+                self.dataManager.downloadAll(localOnly=options.local, append=options.append, threads=options.threads)
+            else:
+                self.dataManager.downloadStocks(cmd_args, append=options.append, threads=options.threads)
         elif command == "plot":
-            if len(args) != 1:
+            if len(cmd_args) != 1:
                 parser.error("missing argument stock symbol")
                 return -1
-            symbol = args[0]
+            symbol = cmd_args[0]
             logger.info("show diagram for stock %s ..." % symbol)
             stock = self.dataManager.loadStockAndHistory(symbol)
             if stock is None:

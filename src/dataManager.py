@@ -11,14 +11,9 @@ class DataManager(object):
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': self.dbpath})
         self.eastmoneyDAM = DAMFactory.createDAM('eastfinance')
 
-    def downloadAll(self, localOnly=False, append=True, threads=5):
+    def __downloadStocks(self, stocks, append=True, threads=5):
         crawler = Crawler(self.dbpath, threads)
         crawler.reset()
-        if localOnly:
-            logger.info("only update local stocks")
-            stocks = self.sqlDAM.readAllStocks()
-        else:
-            stocks = self.eastmoneyDAM.readAllStocks()
         symbol_str = ""
         for stock in stocks:
             start = self.history_start
@@ -37,13 +32,32 @@ class DataManager(object):
             crawler.addStock(stock_l, start, end)
         # commit to create local new stock objects
         self.sqlDAM.commit()
-        if len(stocks) > 0:
-            logger.info("All stocks to update(%d): \n%s" % (len(stocks), symbol_str))
+        if crawler.getRemainCount() > 0:
+            logger.info("All stocks to update(%d): \n%s" % (len(crawler.getRemainCount()), symbol_str))
             logger.info("starting crawler in %s mode with %d threads" % (("append" if append else "overwrite"), threads))
             crawler.start()
             crawler.poll()
         else:
             logger.info("no stock needs to update")
+
+    def downloadStocks(self, symbols, append=True, threads=5):
+        stocks = []
+        for symbol in symbols:
+            s = self.sqlDAM.readStock(symbol)
+            if s is not None:
+                stocks.append(s)
+            else:
+                logger.error("stock %s not found in database")
+                return
+        self.__downloadStocks(stocks, append=append, threads=threads)
+
+    def downloadAll(self, localOnly=False, append=True, threads=5):
+        if localOnly:
+            logger.info("only update local stocks")
+            stocks = self.sqlDAM.readAllStocks()
+        else:
+            stocks = self.eastmoneyDAM.readAllStocks()
+        self.__downloadStocks(stocks, append=append, threads=threads)
 
     def loadAllStocks(self):
         return self.sqlDAM.readAllStocks()
