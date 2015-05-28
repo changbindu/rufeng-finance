@@ -72,7 +72,7 @@ class RufengFinance(object):
                 logger.error("stock %s is not found in database" % symbol)
                 return -1
             plot = StockPlot(stock)
-            plot.plot(False)
+            plot.plot()
         elif command == "list":
             stocks = self.dataManager.loadAllStocks()
             print("List of stocks (symbol, name, price):")

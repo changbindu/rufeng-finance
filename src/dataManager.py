@@ -33,7 +33,7 @@ class DataManager(object):
         # commit to create local new stock objects
         self.sqlDAM.commit()
         if crawler.getRemainCount() > 0:
-            logger.info("All stocks to update(%d): \n%s" % (len(crawler.getRemainCount()), symbol_str))
+            logger.info("All stocks to update(%d): \n%s" % (crawler.getRemainCount(), symbol_str))
             logger.info("starting crawler in %s mode with %d threads" % (("append" if append else "overwrite"), threads))
             crawler.start()
             crawler.poll()
