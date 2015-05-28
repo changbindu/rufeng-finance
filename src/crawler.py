@@ -71,17 +71,16 @@ class Crawler(object):
             except BaseException as excp:
                 failCount += 1
                 lastExcp = excp
-                if isinstance(excp, UfException) and excp.getCode == Errors.NETWORK_404_ERROR:
-                    logger.warning("Failed, stock %s not found" % stock.symbol)
-                    break
+                if isinstance(excp, UfException) and excp.getCode() == Errors.NETWORK_404_ERROR:
+                    raise BaseException("Failed, stock %s not found" % stock.symbol)
                 else:
-                    logger.warning("Failed, %s: %s" % (excp, traceback.format_exc()))
+                    logger.warning("Failed, %s" % (excp))
                 logger.info("Retry in 1 second")
                 time.sleep(1)
             else:
                 break
 
-            if failCount >= MAX_TRY or len(quotes) == 0:
+            if failCount >= MAX_TRY:
                 raise BaseException("Can't retrieve historical data %s" % lastExcp)
         return quotes
 
@@ -100,7 +99,7 @@ class Crawler(object):
                 raise excp
             except BaseException as excp:
                 logger.error("Error while processing %s: %s" % (stock.symbol, excp))
-                logger.debug(traceback.format_exc())
+                #logger.debug(traceback.format_exc())
                 self.failed.append(stock)
             else:
                 logger.info("Success processed %s" % stock.symbol)
@@ -113,7 +112,7 @@ class Crawler(object):
                     self.counter += 1
                     if 0 == self.counter % (self.poolsize if self.poolsize < 20 else 20):
                         self.sqlDAM.commit()
-                        logger.info("Processed %d, %d remain" % (self.counter, self.stockQueue.qsize()))
+                        logger.info("Processed %d, remain %d" % (self.counter, self.stockQueue.qsize()))
                 self.succeeded.append(stock)
             finally:
                 self.stockQueue.task_done()

@@ -23,12 +23,12 @@ class DataManager(object):
                 stock_l = Stock(stock.symbol, stock.name, 0)
                 self.sqlDAM.writeStock(stock_l)
             else:
-                if stock.lastUpdate is not None:
-                    if (end - stock.lastUpdate).days < 1:
+                if stock_l.lastUpdate is not None:
+                    if (end - stock_l.lastUpdate).days < 1:
                         continue
                     else:
-                        start = stock.lastUpdate
-            symbol_str += "%s - %s\n" %(stock.symbol, stock.name)
+                        start = stock_l.lastUpdate
+            symbol_str += "%s - %s\n" %(stock_l.symbol, stock_l.name)
             crawler.addStock(stock_l, start, end)
         # commit to create local new stock objects
         self.sqlDAM.commit()

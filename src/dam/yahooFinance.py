@@ -85,7 +85,7 @@ class YahooFinance(object):
             logger.debug("querying finance.yahoo.com for stock %s..." % symbol)
             resp = urllib.urlopen(url)
             if resp.getcode() == 404:
-                raise UfException(Errors.UNKNOWN_404_ERROR, "data error, not found")
+                raise UfException(Errors.NETWORK_404_ERROR, "data error, not found")
             days = resp.readlines()
             values = [day.decode('utf-8')[:-2].split(',') for day in days]
             # sample values:[['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Adj Clos'], \
@@ -102,7 +102,9 @@ class YahooFinance(object):
 
         except IOError:
             raise UfException(Errors.NETWORK_ERROR, "Can't connect to Yahoo server")
-        except BaseException:
-            raise UfException(Errors.UNKNOWN_ERROR, "Unknown Error in YahooFinance.getHistoricalPrices")
+        except UfException as excp:
+            raise excp
+        except BaseException as excp:
+            raise UfException(Errors.UNKNOWN_ERROR, "Error in YahooFinance: %s" % excp)
         #sample output
         #[stockDaylyData(date='2010-01-04, open='112.37', high='113.39', low='111.51', close='113.33', volume='118944600', adjClose='111.6'))...]
