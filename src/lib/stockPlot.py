@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+
+from pylab import mpl
+mpl.rcParams['font.sans-serif'] = ['SimHei']
+mpl.rcParams['axes.unicode_minus'] = False
+
 import numpy as np
 import matplotlib.colors as colors
 import matplotlib.finance as finance
@@ -32,23 +37,22 @@ class StockPlot(object):
         rect3 = [left, 0.1, width, 0.2]
 
         fig = plt.figure(facecolor='white')
-        axescolor  = '#f6f6f6'  # the axes background color
 
-        info_ax = fig.add_axes(rect1, axisbg=axescolor)  #left, bottom, width, height
-        history_ax = fig.add_axes(rect2, axisbg=axescolor, sharex=info_ax)
-        volume_ax = fig.add_axes(rect3, axisbg=axescolor, sharex=info_ax)
+        info_ax = fig.add_axes(rect1, axisbg='yellow')  #left, bottom, width, height
+        history_ax = fig.add_axes(rect2, axisbg='black', sharex=info_ax)
+        volume_ax = fig.add_axes(rect3, axisbg='black', sharex=info_ax)
 
         plt.xlabel("Time(Day)")
 
         ### plot the stock information
         fillcolor = 'darkgoldenrod'
-        info_ax.text(0.01, 0.9, 'TODO: Here show fundamental information.', va='top', transform=info_ax.transAxes, fontsize=textsize)
+        info_ax.text(0.01, 0.9, u'TODO: Here show fundamental information.', va='top', transform=info_ax.transAxes, fontsize=textsize)
         info_ax.set_ylim(0, 100)
         info_ax.set_yticks([30, 70])
         info_ax.set_title("%s(%s)" % (stock.name, stock.symbol))
 
         ### plot the price and volume data
-        history_ax.vlines(date, low, high, color='black', label='_nolegend_')
+        history_ax.vlines(date, low, high, color='red', linewidth=1, label='_nolegend_')
         pmax = high.max()
         history_ax.set_ylim(0, pmax + pmax/10)
 
@@ -87,6 +91,20 @@ class StockPlot(object):
             label.set_visible(False)
 
         plt.show()
+
+    def saveToFile(self, path):
+        pass
+
+'''
+# StockPlot3D - show several stocks in one  3D diagram
+'''
+class StockPlot3D(object):
+    def __init__(self, stocks):
+        self.stocks = stocks
+        pass
+
+    def plot(self):
+        pass
 
     def saveToFile(self, path):
         pass
