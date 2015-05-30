@@ -42,6 +42,9 @@ class RufengFinance(object):
         parser.add_option("-s", "--selector",
                   default="all", dest = "selector",
                   help="selectors: all, trend, macd, or hot [default: %default]")
+        parser.add_option("--adjusted",
+                  action="store_true", dest="adjusted", default=False,
+                  help="adjust price")
 
         (options, args) = parser.parse_args()
         if len(args) < 1:
@@ -72,6 +75,7 @@ class RufengFinance(object):
                 logger.error("stock %s is not found in database" % symbol)
                 return -1
             plot = StockPlot(stock)
+            plot.setAdjusted(options.adjusted)
             plot.plot()
         elif command == "list":
             stocks = self.dataManager.loadAllStocks()

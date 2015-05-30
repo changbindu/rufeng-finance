@@ -18,6 +18,10 @@ import matplotlib.font_manager as font_manager
 class StockPlot(object):
     def __init__(self, stock):
         self.stock = stock
+        self.adjusted = False
+
+    def setAdjusted(self, adjusted):
+        self.adjusted = adjusted
 
     def plot(self):
         stock = self.stock
@@ -40,7 +44,7 @@ class StockPlot(object):
 
         info_ax = fig.add_axes(rect1, axisbg='yellow')  #left, bottom, width, height
         history_ax = fig.add_axes(rect2, axisbg='black', sharex=info_ax)
-        volume_ax = fig.add_axes(rect3, axisbg='black', sharex=info_ax)
+        volume_ax = fig.add_axes(rect3, axisbg='blue', sharex=info_ax)
 
         plt.xlabel("Time(Day)")
 
@@ -101,7 +105,10 @@ class StockPlot(object):
 class StockPlot3D(object):
     def __init__(self, stocks):
         self.stocks = stocks
-        pass
+        self.adjusted = False
+
+    def setAdjusted(self, adjusted):
+        self.adjusted = adjusted
 
     def plot(self):
         pass
