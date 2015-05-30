@@ -5,6 +5,7 @@ Created on Nov 9, 2011
 '''
 from dam.baseDAM import BaseDAM
 from model.stockObjects import Quote, Tick, Fundamental, Stock, Block
+from threading import Lock
 import sys, os
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, Sequence, ForeignKey, create_engine, and_
@@ -116,6 +117,8 @@ class SqlDAM(BaseDAM):
         self.engine = None
         self.readSession = None
         self.writeSession = None
+        self.writeLock = Lock()
+        self.readLock = Lock()
 
     def setup(self, setting):
         ''' set up '''
@@ -131,10 +134,11 @@ class SqlDAM(BaseDAM):
         Base.metadata.create_all(self.engine, checkfirst = True)
 
     def readAllStocks(self):
-        try:
-            rows = self.readSession.query(StockSql)
-        finally:
-            self.readSession.remove()
+        with self.readLock:
+            try:
+                rows = self.readSession.query(StockSql)
+            finally:
+                self.readSession.remove()
 
         return [Stock(row.symbol, row.name, row.price) for row in rows]
 
@@ -149,7 +153,8 @@ class SqlDAM(BaseDAM):
         return stocksql
 
     def readStock(self, symbol):
-        stocksql = self.__readStock(symbol)
+        with self.readLock:
+            stocksql = self.__readStock(symbol)
         if stocksql is None:
             return None
         return Stock(stocksql.symbol, stocksql.name, stocksql.price, stocksql.lastUpdate)
@@ -157,38 +162,44 @@ class SqlDAM(BaseDAM):
     def writeStock(self, stock):
         ''' write quotes '''
         stockSql = StockSql(stock.symbol, stock.name, stock.price, stock.lastUpdate)
-        if self.__readStock(stock.symbol) is None:
-            self.writeSession.add(stockSql)
-        else:
-            self.writeSession.query(StockSql).filter(and_(StockSql.symbol == stock.symbol)).update(stockSql.toDict())
+        with self.writeLock, self.readLock:
+            if self.__readStock(stock.symbol) is None:
+                self.writeSession.add(stockSql)
+            else:
+                self.writeSession.query(StockSql).filter(and_(StockSql.symbol == stock.symbol)).update(stockSql.toDict())
 
     def readQuotes(self, symbol, start, end):
         ''' read quotes '''
         if end is None:
             end = sys.maxint
 
-        stockSql = self.__readStock(symbol)
-        try:
-            rows = self.readSession.query(QuoteSql).filter(and_(QuoteSql.stock_id == stockSql.id,
-                                    QuoteSql.time >= start, QuoteSql.time < end))
-        finally:
-            self.readSession.remove()
+        with self.readLock:
+            stockSql = self.__readStock(symbol)
+            try:
+                rows = self.readSession.query(QuoteSql).filter(and_(QuoteSql.stock_id == stockSql.id,
+                                        QuoteSql.time >= start, QuoteSql.time < end))
+            finally:
+                self.readSession.remove()
 
         return [Quote(row.time, row.open, row.high, row.low, row.close, row.volume, row.adjClose) for row in rows]
 
     def writeQuotes(self, symbol, quotes):
         ''' write quotes '''
-        stockSql = self.__readStock(symbol)
-        self.writeSession.add_all([QuoteSql(stockSql.id, quote.time, quote.open, quote.high, quote.low,
-                                quote.close, quote.volume, quote.adjClose) for quote in quotes])
+        with self.readLock:
+            stockSql = self.__readStock(symbol)
+        with self.writeLock:
+            self.writeSession.add_all([QuoteSql(stockSql.id, quote.time, quote.open, quote.high, quote.low,
+                                    quote.close, quote.volume, quote.adjClose) for quote in quotes])
 
     def commit(self):
         ''' commit changes '''
-        self.writeSession.commit()
+        with self.writeLock:
+            self.writeSession.commit()
 
     def __del__(self):
         ''' destructor '''
-        if self.readSession:
-            self.readSession.close()
-        if self.writeSession:
-            self.writeSession.close()
+        with self.readLock, self.writeLock:
+            if self.readSession:
+                self.readSession.close()
+            if self.writeSession:
+                self.writeSession.close()

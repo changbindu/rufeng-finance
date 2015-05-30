@@ -24,7 +24,6 @@ class Crawler(object):
         self.sqlDAM = DAMFactory.createDAM("sql", {'db': dbpath})
         self.yahooDAM = DAMFactory.createDAM("yahoo")
         self.poolsize = poolsize
-        self.writeLock = Lock()
         self.failed = []
         self.succeeded = []
         self.threads = []
@@ -103,16 +102,15 @@ class Crawler(object):
                 self.failed.append(stock)
             else:
                 logger.info("Success processed %s" % stock.symbol)
-                with self.writeLock: #dam is not thread safe
-                    self.sqlDAM.writeQuotes(stock.symbol, quotes)
-                    stock.price = quotes[-1].close
-                    stock.lastUpdate = datetime.datetime.now()
-                    self.sqlDAM.writeStock(stock)
+                self.sqlDAM.writeQuotes(stock.symbol, quotes)
+                stock.price = quotes[-1].close
+                stock.lastUpdate = datetime.datetime.now()
+                self.sqlDAM.writeStock(stock)
 
-                    self.counter += 1
-                    if 0 == self.counter % (self.poolsize if self.poolsize < 20 else 20):
-                        self.sqlDAM.commit()
-                        logger.info("Processed %d, remain %d" % (self.counter, self.stockQueue.qsize()))
+                self.counter += 1
+                if 0 == self.counter % (self.poolsize if self.poolsize < 10 else 10):
+                    self.sqlDAM.commit()
+                    logger.info("Processed %d, remain %d." % (self.counter, self.stockQueue.qsize()))
                 self.succeeded.append(stock)
             finally:
                 self.stockQueue.task_done()
