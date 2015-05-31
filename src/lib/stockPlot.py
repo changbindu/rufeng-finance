@@ -2,6 +2,8 @@
 
 import datetime
 
+import matplotlib
+#matplotlib.use('Agg')
 from pylab import mpl
 mpl.rcParams['font.sans-serif'] = ['SimHei']
 mpl.rcParams['axes.unicode_minus'] = False
@@ -65,10 +67,28 @@ class StockPlot(object):
         info_ax.set_title("%s(%s)" % (stock.name, stock.symbol))
 
         ### plot the price and volume data
-        history_ax.vlines(date, open, close, color='red', linewidth=5, label='_nolegend_')
-        history_ax.vlines(date, low, high, color='red', linewidth=1, label='_nolegend_')
+        volume = volume / 1e6  # dollar volume in millions
+        vmax = volume.max()
         pmax = high.max()
         history_ax.set_ylim(0, pmax + pmax/10)
+        volume_ax.set_ylim(0, 1.2*vmax)
+        volume_ax.set_yticks([])
+
+        _up =   np.array([ True if o < c else False for o, c in np.column_stack((open, close))])
+        _down = np.array([ True if o > c else False for o, c in np.column_stack((open, close))])
+        _side = np.array([ True if o == c and v != 0 else False for o, c, v in np.column_stack((open, close, volume))])
+
+        if True in _up:
+            history_ax.vlines(date[_up], open[_up], close[_up], color='red', linewidth=5, label='_nolegend_')
+            history_ax.vlines(date[_up], low[_up], high[_up], color='red', linewidth=1, label='_nolegend_')
+            volume_ax.vlines(date[_up], 0, volume[_up], color='red', linewidth=5, label='_nolegend_')
+        if True in _down:
+            history_ax.vlines(date[_down], open[_down], close[_down], color='green', linewidth=5, label='_nolegend_')
+            history_ax.vlines(date[_down], low[_down], high[_down], color='green', linewidth=1, label='_nolegend_')
+            volume_ax.vlines(date[_down], 0, volume[_down], color='green', linewidth=5, label='_nolegend_')
+        if True in _side:
+            history_ax.vlines(date[_side], open[_side]-pmax*0.001, open[_side]+pmax*0.001, color='0.7', linewidth=5, label='_nolegend_')
+            volume_ax.vlines(date[_side], 0, volume[_side], color='0.7', linewidth=5, label='_nolegend_')
 
         last = stock.history[-1]
         s = '%s O:%1.2f H:%1.2f L:%1.2f C:%1.2f, V:%1.1fM Chg:%+1.2f' % (
@@ -78,12 +98,6 @@ class StockPlot(object):
             last.volume*1e-6,
             last.close-last.open )
         history_ax.text(0.3, 0.9, s, transform=history_ax.transAxes, fontsize=textsize)
-
-        volume = volume / 1e6  # dollar volume in millions
-        vmax = volume.max()
-        poly = volume_ax.fill_between(date, volume, 0, label='Volume', facecolor=fillcolor, edgecolor=fillcolor)
-        volume_ax.set_ylim(0, 1.2*vmax)
-        volume_ax.set_yticks([])
 
         # set locator
         for ax in info_ax, history_ax, volume_ax:
@@ -107,7 +121,7 @@ class StockPlot(object):
         plt.show()
 
     def saveToFile(self, path):
-        pass
+        plt.savefig(path)
 
 '''
 # StockPlot3D - show several stocks in one  3D diagram
