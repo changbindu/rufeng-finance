@@ -26,10 +26,19 @@ class StockPlot(object):
     def plot(self):
         stock = self.stock
         date = np.array([q.time for q in stock.history])
-        low = np.array([q.low for q in stock.history])
+        open = np.array([q.open for q in stock.history])
         close = np.array([q.close for q in stock.history])
+        low = np.array([q.low for q in stock.history])
         high = np.array([q.high for q in stock.history])
         volume = np.array([q.volume for q in stock.history])
+
+        if self.adjusted:
+            adjClose = np.array([q.adjClose for q in stock.history])
+            delta = adjClose - close
+            open += delta
+            close += delta
+            low += delta
+            high += delta
 
         plt.rc('axes', grid=True)
         plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -56,6 +65,7 @@ class StockPlot(object):
         info_ax.set_title("%s(%s)" % (stock.name, stock.symbol))
 
         ### plot the price and volume data
+        history_ax.vlines(date, open, close, color='red', linewidth=5, label='_nolegend_')
         history_ax.vlines(date, low, high, color='red', linewidth=1, label='_nolegend_')
         pmax = high.max()
         history_ax.set_ylim(0, pmax + pmax/10)
@@ -93,7 +103,7 @@ class StockPlot(object):
 
         for label in info_ax.get_yticklabels():
             label.set_visible(False)
-
+        fig.autofmt_xdate()
         plt.show()
 
     def saveToFile(self, path):
