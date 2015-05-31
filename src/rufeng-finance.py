@@ -54,12 +54,12 @@ class RufengFinance(object):
         cmd_args = args[1:] if len(args) > 1 else ()
 
         if options.config:
-            logger.info("using config %s" % options.config)
+            print("using config %s" % options.config)
         self.dataManager = DataManager(dbpath=options.dbfile)
         self.selectEngine = SelectEngine()
 
         if command == "download":
-            logger.info("download data ...")
+            print("download data ...")
             if len(cmd_args) == 0:
                 self.dataManager.downloadAll(localOnly=options.local, append=options.append, threads=options.threads)
             else:
@@ -69,10 +69,10 @@ class RufengFinance(object):
                 parser.error("missing argument stock symbol")
                 return -1
             symbol = cmd_args[0]
-            logger.info("show diagram for stock %s ..." % symbol)
+            print("show diagram for stock %s ..." % symbol)
             stock = self.dataManager.loadStockAndHistory(symbol)
             if stock is None:
-                logger.error("stock %s is not found in database" % symbol)
+                print("stock %s is not found in database" % symbol)
                 return -1
             plot = StockPlot(stock)
             plot.setAdjusted(options.adjusted)
@@ -83,7 +83,14 @@ class RufengFinance(object):
             for stock in stocks:
                 print("%s - %s - %d" % (stock.symbol, stock.name, stock.price))
         elif command == "select":
-            pass
+            engine = SelectEngine()
+            engine.globallMarketData = self.dataManager.loadGlobalMarketData()
+            passed = []
+            for stock in self.dataManager.loadAllStocks():
+                _stock = self.dataManager.loadStockAndHistory(stock.symbol)
+                if engine.select(_stock):
+                    passed.append(stock.symbol)
+            print("Passed stocks:\n%s" % passed)
         else:
             parser.error("unrecognized command %s" % command)
             return -1

@@ -9,7 +9,8 @@ Thanks to Corey Goldberg, this module is based http://www.goldb.org/ystockquote.
 import urllib
 import traceback
 import datetime, time
-from model.stockObjects import Quote, ChinaStockSymbol
+from model.stockObjects import Quote
+import chinaStock
 from lib.errors import UfException, Errors
 
 from lib.util import logger
@@ -17,9 +18,9 @@ from lib.util import logger
 class YahooFinance(object):
     def __chinaSymbolPrefix(self, symbol):
         prefix = symbol[0:3]
-        if prefix in ChinaStockSymbol.SS_PREFIX:
+        if prefix in chinaStock.SS_PREFIX:
             return '.ss'
-        elif prefix in ChinaStockSymbol.SZ_PREFIX:
+        elif prefix in chinaStock.SZ_PREFIX:
             return '.sz'
         else:
             return ''

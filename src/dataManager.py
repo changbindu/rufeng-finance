@@ -3,6 +3,7 @@ from dam.DAMFactory import DAMFactory
 from model.stockObjects import Stock
 from lib.util import logger
 from crawler import Crawler
+from dam import chinaStock
 
 class DataManager(object):
     def __init__(self, dbpath = "data/stock.sqlite"):
@@ -68,3 +69,14 @@ class DataManager(object):
             return None
         stock.history = self.sqlDAM.readQuotes(stock.symbol, self.history_start, datetime.datetime.now())
         return stock
+
+    def loadGlobalMarketData(self):
+        data = GlobalMarketData()
+        data.SZZS_indexi = self.loadStockAndHistory(chinaStock.SZZS_CODE)
+        data.SZCZ_index = self.loadStockAndHistory(chinaStock.SZCZ_CODE)
+        return data
+
+class GlobalMarketData(object):
+    def __init__(self):
+        self.SZZS_index = None
+        self.SZCZ_index = None

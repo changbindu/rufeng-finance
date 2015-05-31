@@ -90,7 +90,3 @@ class Stock(object):
 class Block(Stock):
     ''' stock bock '''
     pass
-
-class ChinaStockSymbol(object):
-    SS_PREFIX = set(["600", "601", "603"])
-    SZ_PREFIX = set(["000", "002", "300"])

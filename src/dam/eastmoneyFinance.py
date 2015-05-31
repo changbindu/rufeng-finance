@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 import urllib
 import re
 
-from model.stockObjects import ChinaStockSymbol
+import chinaStock
 from lib.util import logger
 
 class EastmoneyFinance(object):
@@ -26,7 +26,7 @@ class EastmoneyFinance(object):
             symbol = item.string[-7:-1]
             name = item.string[0:-8]
             prefix = symbol[0:3]
-            if prefix not in (ChinaStockSymbol.SS_PREFIX | ChinaStockSymbol.SZ_PREFIX):
+            if prefix not in (chinaStock.SS_PREFIX | chinaStock.SZ_PREFIX):
                 continue
             stocks[symbol] = name
         return stocks

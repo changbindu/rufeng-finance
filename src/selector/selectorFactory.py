@@ -10,22 +10,22 @@ class SelectorFactory(object):
     def createSelector(selectorType, config = None):
         ''' create DAM '''
         if 'basic' == selectorType:
-            from selector.basicSelector import BasicSelector
+            from basicSelector import BasicSelector
             selector = BasicSelector()
         elif 'hot' == selectorType:
-            from selector.hotSelector import HotSelector
+            from hotSelector import HotSelector
             selector = HotSelector()
         elif 'macd' == selectorType:
-            from selector.MACDSelector import MACDSelector
+            from MACDSelector import MACDSelector
             selector = MACDSelector()
         elif 'stability' == selectorType:
-            from selector.stabilitySelector import StabilitySelector
+            from stabilitySelector import StabilitySelector
             selector = StabilitySelector()
         elif 'topic' == selectorType:
-            from selector.topicSeletor import TopicSeletor
+            from topicSeletor import TopicSeletor
             selector = TopicSeletor()
         elif 'trend' == selectorType:
-            from selector.trendSelector import TrendSelector
+            from trendSelector import TrendSelector
             selector = TrendSelector()
         else:
             raise UfException(Errors.INVALID_DAM_TYPE,
