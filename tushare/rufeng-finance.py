@@ -30,6 +30,7 @@ class RufengFinance(object):
                     # fix tushare
                     if col_name == 'esp':
                         stock.eps = row['esp']
+                        continue
                     else:
                         logger.warn('Stock obj has no attribute ' + col_name)
                 value = row[col_name]
@@ -38,7 +39,12 @@ class RufengFinance(object):
                     value = None
                 stock.__setattr__(col_name, value)
             self.stocks[stock.code] = stock
+
+        #self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logger.info('totally there are %d listed companies', len(self.stocks))
+
+        self.pick_hist_data()
+        #tmp = self.stocks['600233'].to_dict()
 
         logger.info('getting last report')
         df = ts.get_report_data(2014, 3)

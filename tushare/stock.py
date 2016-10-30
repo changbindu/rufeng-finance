@@ -94,4 +94,10 @@ class Stock(MutableMapping):
             self[k] = v
 
     def to_dict(self):
-        pass
+        tmp = dict()
+        for key in self.__dict__:
+            if key == 'hist_data':
+                tmp[key] = self.hist_data.to_dict(orient='index')
+            else:
+                tmp[key] = self.__getattribute__(key)
+        return tmp
