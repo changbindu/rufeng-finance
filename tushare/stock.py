@@ -34,7 +34,7 @@ class Stock(object):
         self.fixedAssets = None # 固定资产
         self.reserved = None # 公积金
         self.reservedPerShare = None # 每股公积金
-        self.eps = None # 每股收益
+        self.esp = None # 每股收益 (FIXME: should be 'eps')
         self.eps_yoy = None # 每股收益同比( %)
         self.bvps = None # 每股净资
         self.pb = None # 市净率
@@ -75,11 +75,10 @@ class Stock(object):
 
         self.price = 0
         self.hist_data = None
-
+        self.hist_qfq = None
 
     def __str__(self):
         ''' convert to string '''
         return json.dumps({"code": self.code,
                            "name": self.name,
-                           "price": self.price,
                           }, ensure_ascii = False)
