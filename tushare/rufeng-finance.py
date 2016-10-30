@@ -27,7 +27,11 @@ class RufengFinance(object):
             stock.code = index
             for col_name in df.columns:
                 if not hasattr(stock, col_name):
-                    logger.warn('Stock obj has no attribute ' + col_name)
+                    # fix tushare
+                    if col_name == 'esp':
+                        stock.eps = row['esp']
+                    else:
+                        logger.warn('Stock obj has no attribute ' + col_name)
                 value = row[col_name]
                 value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
                 if isinstance(value, str) and value == 'nan':
@@ -62,22 +66,24 @@ class RufengFinance(object):
 
         self.pick_hist_data()
 
-        for code in self.stocks.keys():
-            stock = self.stocks[code]
-            if stock.hist_data is None or stock.hist_data.empty:
-                self.stocks.pop(code)
-                logger.warn('removed unavailable stock %s (maybe not IPO yet)', stock)
+        stocks_to_remove = list()
+        for code, stock in self.stocks.items():
+            if stock.hist_data is None:
+                stocks_to_remove.append(stock)
+        for stock in stocks_to_remove:
+            del self.stocks[stock.code]
+            logger.warn('removed unavailable stock %s (maybe not IPO yet)', stock)
+
         # dump basics of all stocks
         logger.info('all %d available stocks:', len(self.stocks))
-        for code in self.stocks:
-            stock = self.stocks[code]
+        for code, stock in self.stocks.items():
             stock.price = stock.hist_data[-1:]['close']
-            logger.info('%s: %d trading days data', stock, stock.hist_data.size)
+            logger.info('%s: %d trading days data', stock, len(stock.hist_data.index))
         return 0
 
     def extract_from_dataframe(self, df):
         if df is None or not isinstance(df, DataFrame):
-            logger.error('Cannot get date or wrong data -> %s!', df)
+            logger.error('cannot get date or wrong data -> %s!', df)
             return
         for index, row in df.iterrows():
             code = row['code']
@@ -95,7 +101,7 @@ class RufengFinance(object):
                     new = isinstance(row[col_name], str) and util.strQ2B(row[col_name]).replace(' ', '') or row[col_name]
                     if isinstance(new, str) and new == 'nan':
                         new = None
-                    if old is not None and old != new:
+                    if old is not None and new is not None and old != new:
                         logger.fatal('corrupted data from tushare, %s: old(%s) != new(%s)', col_name, str(old), str(new))
                 stock.__setattr__(col_name, row[col_name])
 
@@ -122,8 +128,7 @@ class RufengFinance(object):
 
                 if hist is None:
                     logger.error('cannot get hist data of %s', stock)
-                elif hist.size != qfq.size:
-                    logger.warn('probability losing data')
+
                 stock.hist_data = hist
                 stock.hist_qfq = qfq
                 squeue.task_done()

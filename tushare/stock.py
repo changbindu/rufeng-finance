@@ -2,25 +2,12 @@
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import json
+from collections import MutableMapping
 
 
-class Fundamental(object):
-    ''' fundamental class '''
-    def __init__(self):
-        self.sector = None
-        self.industry = None
-        self.summary = None
-        self.totalShare = 0
-        self.tradableShare = 0
-        self.priceEarning = 0
-        self.netAsset = 0
-        self.income = 0
-        self.netIncome = 0
-
-
-class Stock(object):
+class Stock(MutableMapping):
     ''' stock class'''
-    def __init__(self):
+    def __init__(self, from_dict=None):
         # Basics
         self.code = None # 代码
         self.name = None # 名称
@@ -34,7 +21,7 @@ class Stock(object):
         self.fixedAssets = None # 固定资产
         self.reserved = None # 公积金
         self.reservedPerShare = None # 每股公积金
-        self.esp = None # 每股收益 (FIXME: should be 'eps')
+        self.eps = None # 每股收益
         self.eps_yoy = None # 每股收益同比( %)
         self.bvps = None # 每股净资
         self.pb = None # 市净率
@@ -82,3 +69,29 @@ class Stock(object):
         return json.dumps({"code": self.code,
                            "name": self.name,
                           }, ensure_ascii = False)
+
+    def __getitem__(self, key):
+        if key not in self.__dict__:
+            raise KeyError
+        return self.__getattribute__(key)
+
+    def __setitem__(self, key, value):
+        if key not in self.__dict__:
+            raise KeyError
+        return self.__setattr__(key, value)
+
+    def __delitem__(self, key):
+        raise NotImplementedError
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __iter__(self):
+        return self.__dict__.__iter__()
+
+    def from_dict(self, data):
+        for k, v in data:
+            self[k] = v
+
+    def to_dict(self):
+        pass
