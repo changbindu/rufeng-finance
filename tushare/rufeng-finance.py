@@ -146,8 +146,10 @@ class RufengFinance(object):
             if t.is_alive():
                 logger.warning("Thread %s timeout" %t.name)
        '''
+        t_start = datetime.datetime.now()
         squeue.join()
-        logger.info('done getting history data')
+        t_delta = datetime.datetime.now() - t_start
+        logger.info('done getting history data by %d seconds', t_delta.days*24*3600 + t_delta.seconds)
 
 
 if __name__ == '__main__':
