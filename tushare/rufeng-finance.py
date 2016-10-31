@@ -2,10 +2,12 @@
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import sys
+import math
 import datetime
 from queue import Queue
 from threading import Thread
 import logging.config, coloredlogs
+from pymongo import MongoClient
 from pandas import DataFrame
 import tushare as ts
 
@@ -13,11 +15,65 @@ import util
 from stock import Stock
 
 
+class DataManager(object):
+    def __init__(self):
+        client = MongoClient('localhost', 27017)
+        self.db = client.rufeng_finance_database
+        self.stock_collection = self.db.stocks
+        self.indexes_collection = self.db.indexes
+
+    def find_one_stock(self, code):
+        cursor = self.stock_collection.find_one({'code': code})
+        if cursor is None:
+            return None
+        return self._stock_from_dict(cursor[0])
+
+    def find_stock(self, filter=None):
+        slist = []
+        cursor = self.stock_collection.find(filter)
+        for dstock in cursor:
+            slist.append(self._stock_from_dict(dstock))
+        return  slist
+
+    def save_stock(self, stock):
+        stock.last_update = datetime.datetime.now()
+        sdict = self._stock_to_dict(stock)
+        result = self.stock_collection.replace_one({'code': stock.code}, sdict, True)
+        return result
+
+    def drop_stock(self):
+        self.stock_collection.drop()
+
+    @staticmethod
+    def _stock_from_dict(data):
+        stock = Stock()
+        for k, v in data.items():
+            if k == '_id':
+                continue
+            elif k == 'hist_data':
+                stock.hist_data = DataFrame.from_dict(data[k], orient='index')
+            else:
+                stock[k] = v
+        return stock
+
+    @staticmethod
+    def _stock_to_dict(stock):
+        tmp = {}
+        for key in stock.__dict__:
+            if key == 'hist_data':
+                tmp[key] = stock.hist_data.to_dict(orient='index')
+            else:
+                tmp[key] = stock.__getattribute__(key)
+        return tmp
+
+
 class RufengFinance(object):
     def __init__(self, logger):
         self.logger = logger
         self.num_threads = 20
         self.stocks = {}
+        self.data_manager = DataManager()
+        self.force_update = False
 
     def main(self):
         logger.info('getting basics')
@@ -27,49 +83,52 @@ class RufengFinance(object):
             stock.code = index
             for col_name in df.columns:
                 if not hasattr(stock, col_name):
-                    # fix tushare
+                    # fixup tushare
                     if col_name == 'esp':
                         stock.eps = row['esp']
                         continue
-                    else:
-                        logger.warn('Stock obj has no attribute ' + col_name)
-                value = row[col_name]
-                value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
-                if isinstance(value, str) and value == 'nan':
-                    value = None
-                stock.__setattr__(col_name, value)
+                    logger.warn('Stock obj has no attribute %s, skip', col_name)
+                else:
+                    value = row[col_name]
+                    value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
+                    stock.__setattr__(col_name, value)
             self.stocks[stock.code] = stock
 
-        #self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
+        # self.data_manager.drop_stock()
+        # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logger.info('totally there are %d listed companies', len(self.stocks))
 
-        self.pick_hist_data()
-        #tmp = self.stocks['600233'].to_dict()
+        if not self.force_update:
+            logger.info('try load stock data from local database first')
+            self.load_from_db()
+        else:
+            logger.info('force update all stocks to local database')
 
-        logger.info('getting last report')
+        logger.info('getting last report from tushare')
         df = ts.get_report_data(2014, 3)
         self.extract_from_dataframe(df)
 
-        logger.info('getting last profit data')
+        logger.info('getting last profit data from tushare')
         df = ts.get_profit_data(2014, 3)
         self.extract_from_dataframe(df)
 
-        logger.info('getting last operation data')
+        logger.info('getting last operation data from tushare')
         df = ts.get_operation_data(2014, 3)
         self.extract_from_dataframe(df)
 
-        logger.info('getting last growth data')
+        logger.info('getting last growth data from tushare')
         df = ts.get_growth_data(2014, 3)
         self.extract_from_dataframe(df)
 
-        logger.info('getting last debtpaying data')
+        logger.info('getting last debtpaying data from tushare')
         df = ts.get_debtpaying_data(2014, 3)
         self.extract_from_dataframe(df)
 
-        logger.info('getting last cashflow data')
+        logger.info('getting last cashflow data from tushare')
         df = ts.get_cashflow_data(2014, 3)
         self.extract_from_dataframe(df)
 
+        logger.info('getting history trading data from tushare')
         self.pick_hist_data()
 
         stocks_to_remove = list()
@@ -81,15 +140,23 @@ class RufengFinance(object):
             logger.warn('removed unavailable stock %s (maybe not IPO yet)', stock)
 
         # dump basics of all stocks
-        logger.info('all %d available stocks:', len(self.stocks))
+        logger.info('all %d available stocks, saving to local database', len(self.stocks))
         for code, stock in self.stocks.items():
-            stock.price = stock.hist_data[-1:]['close']
             logger.info('%s: %d trading days data', stock, len(stock.hist_data.index))
+            stock.price = stock.hist_data[-1:]['close'][0]
+            self.data_manager.save_stock(stock)
         return 0
+
+    def load_from_db(self):
+        for stock in self.data_manager.find_stock():
+            delta = datetime.datetime.now() - stock.last_update
+            if delta < datetime.timedelta(hours=12):
+                self.stocks[stock.code] = stock
+                logger.debug('stock %s is already updated at %s', stock, stock.last_update)
 
     def extract_from_dataframe(self, df):
         if df is None or not isinstance(df, DataFrame):
-            logger.error('cannot get date or wrong data -> %s!', df)
+            logger.error('cannot get data or wrong data -> %s!', df)
             return
         for index, row in df.iterrows():
             code = row['code']
@@ -101,21 +168,23 @@ class RufengFinance(object):
                 if col_name == 'code':
                     continue
                 if not hasattr(stock, col_name):
-                    logger.warn('stock obj has no attribute ' + col_name)
+                    logger.warn('stock obj has no attribute %s, skip', col_name)
                 else:
                     old = stock.__getattribute__(col_name)
                     new = isinstance(row[col_name], str) and util.strQ2B(row[col_name]).replace(' ', '') or row[col_name]
-                    if isinstance(new, str) and new == 'nan':
-                        new = None
-                    if old is not None and new is not None and old != new:
-                        logger.fatal('corrupted data from tushare, %s: old(%s) != new(%s)', col_name, str(old), str(new))
-                stock.__setattr__(col_name, row[col_name])
+                    if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
+                       new is not None and (isinstance(new, float) and not math.isnan(new)) and \
+                       old != new:
+                        logger.fatal('corrupted data from tushare, %s: old(%s) != new(%s), %s',
+                                     col_name, str(old), str(new), stock)
+                    stock.__setattr__(col_name, row[col_name])
 
     def pick_hist_data(self):
         threads = []
         squeue = Queue()
-        for code in self.stocks:
-            squeue.put(self.stocks[code])
+        for code, stock in self.stocks.items():
+            if stock.hist_data is None:
+                squeue.put(self.stocks[code])
 
         h_end = datetime.date.today()
         h_start = h_end - datetime.timedelta(days=365)

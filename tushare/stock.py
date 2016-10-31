@@ -5,7 +5,7 @@ import json
 from collections import MutableMapping
 
 
-class Stock(MutableMapping):
+class Stock(object):
     ''' stock class'''
     def __init__(self, from_dict=None):
         # Basics
@@ -60,9 +60,11 @@ class Stock(MutableMapping):
         self.cf_liabilities = None # 经营现金净流量对负债比率
         self.cashflowratio = None # 现金流量比率
 
-        self.price = 0
-        self.hist_data = None
+        self.price = float('NaN')
+        self.hist_data = None # DataFrame
         self.hist_qfq = None
+
+        self.last_update = None
 
     def __str__(self):
         ''' convert to string '''
@@ -88,16 +90,3 @@ class Stock(MutableMapping):
 
     def __iter__(self):
         return self.__dict__.__iter__()
-
-    def from_dict(self, data):
-        for k, v in data:
-            self[k] = v
-
-    def to_dict(self):
-        tmp = dict()
-        for key in self.__dict__:
-            if key == 'hist_data':
-                tmp[key] = self.hist_data.to_dict(orient='index')
-            else:
-                tmp[key] = self.__getattribute__(key)
-        return tmp
