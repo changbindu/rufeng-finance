@@ -76,7 +76,7 @@ class RufengFinance(object):
         self.force_update = False
 
     def main(self):
-        logger.info('getting basics')
+        logger.info('getting basics from tushare')
         df = ts.get_stock_basics()
         for index, row in df.iterrows():
             stock = Stock()
@@ -133,7 +133,7 @@ class RufengFinance(object):
 
         stocks_to_remove = list()
         for code, stock in self.stocks.items():
-            if stock.hist_data is None:
+            if stock.hist_data is None or len(stock.hist_data.index) == 0:
                 stocks_to_remove.append(stock)
         for stock in stocks_to_remove:
             del self.stocks[stock.code]
