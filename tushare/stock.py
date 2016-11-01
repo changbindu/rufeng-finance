@@ -15,7 +15,9 @@ class Stock(object):
         self.area = None # 地区
         self.pe = None # 市盈率
         self.outstanding = None # 流通股本
+        self.nmc = None # 流通市值(万元)
         self.totals = None # 总股本(万)
+        self.mktcap = None # 总市值(万元)
         self.totalAssets = None # 总资产(万)
         self.liquidAssets = None # 流动资产
         self.fixedAssets = None # 固定资产

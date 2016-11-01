@@ -93,6 +93,12 @@ class RufengFinance(object):
         else:
             logger.info('force update all stocks to local database')
 
+        logger.info('getting last trading data')
+        df = ts.get_today_all()
+        self.extract_from_dataframe(df,
+                    ignore=('changepercent', 'open', 'high', 'low', 'settlement', 'volume', 'turnoverratio', 'amount'),
+                    remap={'trade': 'price', 'per': 'pe'})
+
         # calculate the report quarter
         report_date = datetime.date.today() - datetime.timedelta(days=60)
         report_quarter = math.ceil(report_date.month/3.0)
@@ -103,7 +109,7 @@ class RufengFinance(object):
 
         logger.info('getting last profit data from tushare')
         df = ts.get_profit_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df)
+        self.extract_from_dataframe(df, ignore=('net_profits', 'roe', 'eps'))
 
         logger.info('getting last operation data from tushare')
         df = ts.get_operation_data(report_date.year, report_quarter)
@@ -136,7 +142,7 @@ class RufengFinance(object):
         logger.info('all %d available stocks, saving to local database', len(self.stocks))
         for code, stock in self.stocks.items():
             logger.info('%s: %d trading days data', stock, len(stock.hist_data.index))
-            stock.price = stock.hist_data[-1:]['close'][0]
+            # stock.price = stock.hist_data[-1:]['close'][0]
             self.data_manager.save_stock(stock)
         return 0
 
@@ -165,7 +171,7 @@ class RufengFinance(object):
                 self.stocks[stock.code] = stock
                 logger.debug('stock %s is already updated at %s', stock, stock.last_update)
 
-    def extract_from_dataframe(self, df):
+    def extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
         if df is None or not isinstance(df, DataFrame):
             logger.error('cannot get data or wrong data -> %s!', df)
             return
@@ -176,20 +182,24 @@ class RufengFinance(object):
                 continue
             stock = self.stocks[code]
             for col_name in df.columns:
-                if col_name == 'code':
+                if col_name == 'code' or col_name in ignore:
                     continue
-                if not hasattr(stock, col_name):
+                if col_name in special_handler:
+                    special_handler[col_name](stock, df, row[col_name])
+                    continue
+                real_field = col_name in remap and remap[col_name] or col_name
+                if not hasattr(stock, real_field):
                     logger.warn('stock obj has no attribute %s, skip', col_name)
                 else:
-                    old = stock.__getattribute__(col_name)
+                    old = stock.__getattribute__(real_field)
                     new = isinstance(row[col_name], str) and util.strQ2B(row[col_name]).replace(' ', '') or row[col_name]
                     new = isinstance(new, float) and round(new, 2) or new
                     if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
                        new is not None and (isinstance(new, float) and not math.isnan(new)) and \
                        old != new:
-                        logger.fatal('corrupted data from tushare, %s: old(%s) != new(%s), %s',
+                        logger.info('field %s changed: old(%s) -> new(%s), %s',
                                      col_name, str(old), str(new), stock)
-                    stock.__setattr__(col_name, new)
+                    stock.__setattr__(real_field, new)
 
     def pick_hist_data(self):
         threads = []
