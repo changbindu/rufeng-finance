@@ -2,6 +2,9 @@
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import sys
+if sys.version_info < (3, 4):
+    raise RuntimeError('at least Python 3.4 is required to run')
+
 import math
 import datetime
 from queue import Queue
@@ -77,22 +80,7 @@ class RufengFinance(object):
 
     def main(self):
         logger.info('getting basics from tushare')
-        df = ts.get_stock_basics()
-        for index, row in df.iterrows():
-            stock = Stock()
-            stock.code = index
-            for col_name in df.columns:
-                if not hasattr(stock, col_name):
-                    # fixup tushare
-                    if col_name == 'esp':
-                        stock.eps = row['esp']
-                        continue
-                    logger.warn('Stock obj has no attribute %s, skip', col_name)
-                else:
-                    value = row[col_name]
-                    value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
-                    stock.__setattr__(col_name, value)
-            self.stocks[stock.code] = stock
+        self.init_stock_objs()
 
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
@@ -151,6 +139,24 @@ class RufengFinance(object):
             self.data_manager.save_stock(stock)
         return 0
 
+    def init_stock_objs(self):
+        logger.info('getting stock basics from tushare')
+        df = ts.get_stock_basics()
+        for index, row in df.iterrows():
+            stock = Stock()
+            stock.code = index
+            for col_name in df.columns:
+                # we only trust these data
+                if not col_name in ('name', 'industry', 'area'):
+                    continue
+                if not hasattr(stock, col_name):
+                    logger.warn('Stock obj has no attribute %s, skip', col_name)
+                else:
+                    value = row[col_name]
+                    value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
+                    stock.__setattr__(col_name, value)
+            self.stocks[stock.code] = stock
+
     def load_from_db(self):
         for stock in self.data_manager.find_stock():
             delta = datetime.datetime.now() - stock.last_update
@@ -176,12 +182,13 @@ class RufengFinance(object):
                 else:
                     old = stock.__getattribute__(col_name)
                     new = isinstance(row[col_name], str) and util.strQ2B(row[col_name]).replace(' ', '') or row[col_name]
+                    new = isinstance(new, float) and round(new, 2) or new
                     if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
                        new is not None and (isinstance(new, float) and not math.isnan(new)) and \
                        old != new:
                         logger.fatal('corrupted data from tushare, %s: old(%s) != new(%s), %s',
                                      col_name, str(old), str(new), stock)
-                    stock.__setattr__(col_name, row[col_name])
+                    stock.__setattr__(col_name, new)
 
     def pick_hist_data(self):
         threads = []
