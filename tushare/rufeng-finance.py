@@ -4,6 +4,7 @@ __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 import sys
 if sys.version_info < (3, 4):
     raise RuntimeError('at least Python 3.4 is required to run')
+sys.path.append('tushare')
 
 import math
 import datetime
