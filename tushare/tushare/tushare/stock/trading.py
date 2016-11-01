@@ -95,7 +95,7 @@ def get_hist_data(code=None, start=None, end=None,
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
-def _parsing_dayprice_json(pageNum=1):
+def _parsing_dayprice_json(pageNum=1, retry_count=3):
     """
            处理当日行情分页数据，格式为json
      Parameters
@@ -105,26 +105,32 @@ def _parsing_dayprice_json(pageNum=1):
      -------
         DataFrame 当日所有股票交易数据(DataFrame)
     """
-    ct._write_console()
-    request = Request(ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
-                                 ct.PAGES['jv'], pageNum))
-    text = urlopen(request, timeout=10).read()
-    if text == 'null':
-        return None
-    reg = re.compile(r'\,(.*?)\:') 
-    text = reg.sub(r',"\1":', text.decode('gbk') if ct.PY3 else text) 
-    text = text.replace('"{symbol', '{"symbol')
-    text = text.replace('{symbol', '{"symbol"')
-    if ct.PY3:
-        jstr = json.dumps(text)
-    else:
-        jstr = json.dumps(text, encoding='GBK')
-    js = json.loads(jstr)
-    df = pd.DataFrame(pd.read_json(js, dtype={'code':object}),
-                      columns=ct.DAY_TRADING_COLUMNS)
-    df = df.drop('symbol', axis=1)
-#     df = df.ix[df.volume > 0]
-    return df
+    for _ in range(retry_count):
+        try:
+            ct._write_console()
+            request = Request(ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
+                                         ct.PAGES['jv'], pageNum))
+            text = urlopen(request, timeout=10).read()
+        except Exception as e:
+            ct._write_msg(e)
+        else:
+            if text == 'null':
+                return None
+            reg = re.compile(r'\,(.*?)\:')
+            text = reg.sub(r',"\1":', text.decode('gbk') if ct.PY3 else text)
+            text = text.replace('"{symbol', '{"symbol')
+            text = text.replace('{symbol', '{"symbol"')
+            if ct.PY3:
+                jstr = json.dumps(text)
+            else:
+                jstr = json.dumps(text, encoding='GBK')
+            js = json.loads(jstr)
+            df = pd.DataFrame(pd.read_json(js, dtype={'code':object}),
+                              columns=ct.DAY_TRADING_COLUMNS)
+            df = df.drop('symbol', axis=1)
+            # df = df.ix[df.volume > 0]
+            return df
+    raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
 def get_tick_data(code=None, date=None, retry_count=3, pause=0.001):
@@ -281,7 +287,7 @@ def _today_ticks(symbol, tdate, pageNo, retry_count, pause):
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
         
     
-def get_today_all():
+def get_today_all(retry_count=3):
     """
         一次性获取最近一个日交易日所有股票的交易数据
     return
@@ -290,15 +296,16 @@ def get_today_all():
            属性：代码，名称，涨跌幅，现价，开盘价，最高价，最低价，最日收盘价，成交量，换手率，成交额，市盈率，市净率，总市值，流通市值
     """
     ct._write_head()
-    df = _parsing_dayprice_json(1)
+    df = _parsing_dayprice_json(1, retry_count=retry_count)
     if df is not None:
         for i in range(2, ct.PAGE_NUM[0]):
-            newdf = _parsing_dayprice_json(i)
+            newdf = _parsing_dayprice_json(i, retry_count=retry_count)
             df = df.append(newdf, ignore_index=True)
+    print('done')
     return df
 
 
-def get_realtime_quotes(symbols=None):
+def get_realtime_quotes(symbols=None, retry_count=3):
     """
         获取实时交易数据 getting real time quotes data
        用于跟踪交易情况（本次执行的结果-上一次执行的数据）
@@ -342,30 +349,36 @@ def get_realtime_quotes(symbols=None):
     else:
         symbols_list = _code_to_symbol(symbols)
         
-    symbols_list = symbols_list[:-1] if len(symbols_list) > 8 else symbols_list 
-    request = Request(ct.LIVE_DATA_URL%(ct.P_TYPE['http'], ct.DOMAINS['sinahq'],
-                                                _random(), symbols_list))
-    text = urlopen(request,timeout=10).read()
-    text = text.decode('GBK')
-    reg = re.compile(r'\="(.*?)\";')
-    data = reg.findall(text)
-    regSym = re.compile(r'(?:sh|sz)(.*?)\=')
-    syms = regSym.findall(text)
-    data_list = []
-    syms_list = []
-    for index, row in enumerate(data):
-        if len(row)>1:
-            data_list.append([astr for astr in row.split(',')])
-            syms_list.append(syms[index])
-    if len(syms_list) == 0:
-        return None
-    df = pd.DataFrame(data_list, columns=ct.LIVE_DATA_COLS)
-    df = df.drop('s', axis=1)
-    df['code'] = syms_list
-    ls = [cls for cls in df.columns if '_v' in cls]
-    for txt in ls:
-        df[txt] = df[txt].map(lambda x : x[:-2])
-    return df
+    symbols_list = symbols_list[:-1] if len(symbols_list) > 8 else symbols_list
+    for _ in range(retry_count):
+        try:
+            request = Request(ct.LIVE_DATA_URL%(ct.P_TYPE['http'], ct.DOMAINS['sinahq'],
+                                                        _random(), symbols_list))
+            text = urlopen(request,timeout=10).read()
+        except Exception as e:
+            ct._write_msg(e)
+        else:
+            text = text.decode('GBK')
+            reg = re.compile(r'\="(.*?)\";')
+            data = reg.findall(text)
+            regSym = re.compile(r'(?:sh|sz)(.*?)\=')
+            syms = regSym.findall(text)
+            data_list = []
+            syms_list = []
+            for index, row in enumerate(data):
+                if len(row)>1:
+                    data_list.append([astr for astr in row.split(',')])
+                    syms_list.append(syms[index])
+            if len(syms_list) == 0:
+                return None
+            df = pd.DataFrame(data_list, columns=ct.LIVE_DATA_COLS)
+            df = df.drop('s', axis=1)
+            df['code'] = syms_list
+            ls = [cls for cls in df.columns if '_v' in cls]
+            for txt in ls:
+                df[txt] = df[txt].map(lambda x : x[:-2])
+            return df
+    raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
 def get_h_data(code, start=None, end=None, autype='qfq',
@@ -483,27 +496,33 @@ def get_h_data(code, start=None, end=None, autype='qfq',
             return data
 
 
-def _parase_fq_factor(code, start, end):
+def _parase_fq_factor(code, start, end, retry_count=3):
     symbol = _code_to_symbol(code)
-    request = Request(ct.HIST_FQ_FACTOR_URL%(ct.P_TYPE['http'],
-                                             ct.DOMAINS['vsf'], symbol))
-    text = urlopen(request, timeout=10).read()
-    text = text[1:len(text)-1]
-    text = text.decode('utf-8') if ct.PY3 else text
-    text = text.replace('{_', '{"')
-    text = text.replace('total', '"total"')
-    text = text.replace('data', '"data"')
-    text = text.replace(':"', '":"')
-    text = text.replace('",_', '","')
-    text = text.replace('_', '-')
-    text = json.loads(text)
-    df = pd.DataFrame({'date':list(text['data'].keys()), 'factor':list(text['data'].values())})
-    df['date'] = df['date'].map(_fun_except) # for null case
-    if df['date'].dtypes == np.object:
-        df['date'] = df['date'].astype(np.datetime64)
-    df = df.drop_duplicates('date')
-    df['factor'] = df['factor'].astype(float)
-    return df
+    for _ in range(retry_count):
+        try:
+            request = Request(ct.HIST_FQ_FACTOR_URL%(ct.P_TYPE['http'],
+                                                     ct.DOMAINS['vsf'], symbol))
+            text = urlopen(request, timeout=10).read()
+        except Exception as e:
+            ct._write_msg(e)
+        else:
+            text = text[1:len(text)-1]
+            text = text.decode('utf-8') if ct.PY3 else text
+            text = text.replace('{_', '{"')
+            text = text.replace('total', '"total"')
+            text = text.replace('data', '"data"')
+            text = text.replace(':"', '":"')
+            text = text.replace('",_', '","')
+            text = text.replace('_', '-')
+            text = json.loads(text)
+            df = pd.DataFrame({'date':list(text['data'].keys()), 'factor':list(text['data'].values())})
+            df['date'] = df['date'].map(_fun_except) # for null case
+            if df['date'].dtypes == np.object:
+                df['date'] = df['date'].astype(np.datetime64)
+            df = df.drop_duplicates('date')
+            df['factor'] = df['factor'].astype(float)
+            return df
+    raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
 def _fun_except(x):
@@ -549,7 +568,7 @@ def _parse_fq_data(url, index, retry_count, pause):
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
-def get_index():
+def get_index(retry_count=3):
     """
     获取大盘指数行情
     return
@@ -566,23 +585,29 @@ def get_index():
           volume:成交量(手)
           amount:成交金额（亿元）
     """
-    request = Request(ct.INDEX_HQ_URL%(ct.P_TYPE['http'],
-                                             ct.DOMAINS['sinahq']))
-    text = urlopen(request, timeout=10).read()
-    text = text.decode('GBK')
-    text = text.replace('var hq_str_sh', '').replace('var hq_str_sz', '')
-    text = text.replace('";', '').replace('"', '').replace('=', ',')
-    text = '%s%s'%(ct.INDEX_HEADER, text)
-    df = pd.read_csv(StringIO(text), sep=',', thousands=',')
-    df['change'] = (df['close'] / df['preclose'] - 1 ) * 100
-    df['amount'] = df['amount'] / 100000000
-    df['change'] = df['change'].map(ct.FORMAT)
-    df['amount'] = df['amount'].map(ct.FORMAT4)
-    df = df[ct.INDEX_COLS]
-    df['code'] = df['code'].map(lambda x:str(x).zfill(6))
-    df['change'] = df['change'].astype(float)
-    df['amount'] = df['amount'].astype(float)
-    return df
+    for _ in range(retry_count):
+        try:
+            request = Request(ct.INDEX_HQ_URL%(ct.P_TYPE['http'],
+                                                     ct.DOMAINS['sinahq']))
+            text = urlopen(request, timeout=10).read()
+        except Exception as e:
+            ct._write_msg(e)
+        else:
+            text = text.decode('GBK')
+            text = text.replace('var hq_str_sh', '').replace('var hq_str_sz', '')
+            text = text.replace('";', '').replace('"', '').replace('=', ',')
+            text = '%s%s'%(ct.INDEX_HEADER, text)
+            df = pd.read_csv(StringIO(text), sep=',', thousands=',')
+            df['change'] = (df['close'] / df['preclose'] - 1 ) * 100
+            df['amount'] = df['amount'] / 100000000
+            df['change'] = df['change'].map(ct.FORMAT)
+            df['amount'] = df['amount'].map(ct.FORMAT4)
+            df = df[ct.INDEX_COLS]
+            df['code'] = df['code'].map(lambda x:str(x).zfill(6))
+            df['change'] = df['change'].astype(float)
+            df['amount'] = df['amount'].astype(float)
+            return df
+    raise IOError(ct.NETWORK_URL_ERROR_MSG)
  
 
 def _get_index_url(index, code, qt):
