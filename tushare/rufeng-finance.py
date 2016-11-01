@@ -144,6 +144,18 @@ class RufengFinance(object):
             logger.info('%s: %d trading days data', stock, len(stock.hist_data.index))
             # stock.price = stock.hist_data[-1:]['close'][0]
             self.data_manager.save_stock(stock)
+
+        # calculate qianfuquan data
+        for code, stock in self.stocks.items():
+            for i in range(1, len(stock.hist_data.index)-1):
+                b = stock.hist_data.at[stock.hist_data.index[i], 'close']
+                a = stock.hist_data.at[stock.hist_data.index[i+1], 'close']
+                p = stock.hist_data.at[stock.hist_data.index[i+1], 'p_change'] / 100.0
+
+                q = (b - a * p) / a
+                if not 0.89 < q < 1.1:
+                    print('chuquan %s: %f %f %f, %f', stock.hist_data.index[i], b, a, p, q)
+
         return 0
 
     def init_stock_objs(self):
