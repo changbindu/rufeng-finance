@@ -54,7 +54,7 @@ class DataManager(object):
         for k, v in data.items():
             if k == '_id':
                 continue
-            elif k == 'hist_data':
+            elif data[k] is not None and k in ('hist_data', 'hist_qfq'):
                 stock.hist_data = DataFrame.from_dict(data[k], orient='index')
             else:
                 stock[k] = v
@@ -63,11 +63,12 @@ class DataManager(object):
     @staticmethod
     def _stock_to_dict(stock):
         tmp = {}
-        for key in stock.__dict__:
-            if key == 'hist_data':
-                tmp[key] = stock.hist_data.to_dict(orient='index')
+        for k in stock.__dict__:
+            v = stock.__getattribute__(k)
+            if v is not None and k in ('hist_data', 'hist_qfq'):
+                tmp[k] = v.to_dict(orient='index')
             else:
-                tmp[key] = stock.__getattribute__(key)
+                tmp[k] = v
         return tmp
 
 
@@ -220,7 +221,7 @@ class RufengFinance(object):
         threads = []
         squeue = Queue()
         for code, stock in self.stocks.items():
-            if stock.hist_data is None:
+            if stock.hist_data is None or stock.hist_qfq is None:
                 squeue.put(self.stocks[code])
 
         h_end = datetime.date.today()
@@ -233,7 +234,7 @@ class RufengFinance(object):
                              len(self.stocks), stock)
                 try:
                     hist = ts.get_hist_data(stock.code, start=str(h_start), end=str(h_end), ktype='D', retry_count=5, pause=0)
-                    qfq = None # ts.get_h_data(stock.code, start=str(h_start), end=str(h_end))  # 前复权数据
+                    qfq = ts.get_h_data(stock.code, start=str(h_start), end=str(h_end))  # 前复权数据
                 except Exception as e:
                     logger.error('exception: %s', str(e))
                     hist = qfq = None
