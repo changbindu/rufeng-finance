@@ -142,7 +142,7 @@ def _write_tips(tip):
     sys.stdout.flush()
 
 def _write_msg(msg):
-    sys.stdout.write(msg)
+    sys.stdout.write(str(msg))
     sys.stdout.flush()
     
 def _check_input(year, quarter):
