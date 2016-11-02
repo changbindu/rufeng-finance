@@ -417,7 +417,7 @@ def get_h_data(code, start=None, end=None, autype='qfq',
     end = du.today() if end is None else end
     qs = du.get_quarts(start, end)
     qt = qs[0]
-    ct._write_head()
+    # ct._write_head()
     data = _parse_fq_data(_get_index_url(index, code, qt), index,
                           retry_count, pause)
     if data is None:
@@ -425,7 +425,7 @@ def get_h_data(code, start=None, end=None, autype='qfq',
     if len(qs)>1:
         for d in range(1, len(qs)):
             qt = qs[d]
-            ct._write_console()
+            # ct._write_console()
             df = _parse_fq_data(_get_index_url(index, code, qt), index,
                                 retry_count, pause)
             if df is None:  # 可能df为空，退出循环
@@ -456,7 +456,7 @@ def get_h_data(code, start=None, end=None, autype='qfq',
                 data = data.drop('factor', axis=1)
             df = _parase_fq_factor(code, start, end)
             df = df.drop_duplicates('date')
-            df = df.sort('date', ascending=False)
+            df = df.sort_values('date', ascending=False)
             firstDate = data.head(1)['date']
             frow = df[df.date == firstDate[0]]
             rt = get_realtime_quotes(code)

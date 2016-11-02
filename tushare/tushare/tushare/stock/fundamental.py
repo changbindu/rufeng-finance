@@ -432,7 +432,7 @@ def _get_cashflow_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return dataArr
         except Exception as e:
             ct._write_msg(e)
-        raise IOError(ct.NETWORK_URL_ERROR_MSG)
+    raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
 def _data_path():
