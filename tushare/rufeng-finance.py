@@ -16,7 +16,7 @@ from pandas import DataFrame
 import tushare as ts
 
 import util
-from stock import Stock
+from stock import Stock, Index
 
 
 class DataManager(object):
@@ -77,6 +77,7 @@ class RufengFinance(object):
         self.logger = logger
         self.num_threads = 20
         self.stocks = {}
+        self.indexes = {}
         self.data_manager = DataManager()
         self.force_update = False
 
@@ -94,7 +95,10 @@ class RufengFinance(object):
         else:
             logger.info('force update all stocks to local database')
 
-        logger.info('getting last trading data')
+        logger.debug('get indexes from tushare')
+        self.get_indexes()
+
+        logger.info('getting last stock trading data')
         df = ts.get_today_all()
         self.extract_from_dataframe(df,
                     ignore=('changepercent', 'open', 'high', 'low', 'settlement', 'volume', 'turnoverratio', 'amount'),
@@ -142,7 +146,7 @@ class RufengFinance(object):
         # dump basics of all stocks
         logger.info('all %d available stocks, saving to local database', len(self.stocks))
         for code, stock in self.stocks.items():
-            logger.info('%s: %d trading days data', stock, len(stock.hist_data.index))
+            logger.info('%s: %d days trading data', stock, len(stock.hist_data.index))
             # stock.price = stock.hist_data[-1:]['close'][0]
             self.data_manager.save_stock(stock)
 
@@ -179,6 +183,23 @@ class RufengFinance(object):
                     value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
                     stock.__setattr__(col_name, value)
             self.stocks[stock.code] = stock
+
+    def get_indexes(self):
+        index_map = {'000001': 'sh', '399001': 'sz', '000300': 'hs300', '000016': 'sz50', '399101': 'zxb', '399005': 'cyb'}
+        logger.info('get indexes info')
+        df = ts.get_index()
+        for i, row in df.iterrows():
+            if row['code'] in index_map:
+                index = Index()
+                index.code = row['code']
+                index.name = row['name']
+                self.indexes[index.code] = index
+
+        for code, index in self.indexes.items():
+            logger.info('get all hist data of index %s' % str(index))
+            df = ts.get_hist_data(index_map[code])
+            logger.info('got %d days trading  data' % len(df.index))
+            index.hist_data = df
 
     def load_from_db(self):
         for stock in self.data_manager.find_stock():

@@ -4,10 +4,40 @@ __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 import json
 from collections import MutableMapping
 
+class StockBase(object):
+    def __init__(self):
+        self.code = None  # 代码
+        self.name = None  # 名称
 
-class Stock(object):
+    def __str__(self):
+        ''' convert to string '''
+        return json.dumps({"code": self.code,
+                           "name": self.name,
+                          }, ensure_ascii = False)
+
+    def __getitem__(self, key):
+        if key not in self.__dict__:
+            raise KeyError
+        return self.__getattribute__(key)
+
+    def __setitem__(self, key, value):
+        if key not in self.__dict__:
+            raise KeyError
+        return self.__setattr__(key, value)
+
+    def __delitem__(self, key):
+        raise NotImplementedError
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __iter__(self):
+        return self.__dict__.__iter__()
+
+
+class Stock(StockBase):
     ''' stock class'''
-    def __init__(self, from_dict=None):
+    def __init__(self):
         # Basics
         self.code = None # 代码
         self.name = None # 名称
@@ -68,27 +98,9 @@ class Stock(object):
 
         self.last_update = None
 
-    def __str__(self):
-        ''' convert to string '''
-        return json.dumps({"code": self.code,
-                           "name": self.name,
-                          }, ensure_ascii = False)
 
-    def __getitem__(self, key):
-        if key not in self.__dict__:
-            raise KeyError
-        return self.__getattribute__(key)
+class Index(StockBase):
+    def __init__(self):
+        self.hist_data = None
 
-    def __setitem__(self, key, value):
-        if key not in self.__dict__:
-            raise KeyError
-        return self.__setattr__(key, value)
-
-    def __delitem__(self, key):
-        raise NotImplementedError
-
-    def __len__(self):
-        return len(self.__dict__)
-
-    def __iter__(self):
-        return self.__dict__.__iter__()
+        self.last_update = None
