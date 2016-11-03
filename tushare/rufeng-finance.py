@@ -17,7 +17,7 @@ import tushare as ts
 
 import util
 from stock import Stock, Index
-
+from analyzer import Analyzer
 
 class DataManager(object):
     def __init__(self):
@@ -164,6 +164,9 @@ class RufengFinance(object):
                 if q > 1.1:
                     print('%s chuq-uan %s: %s %s %s, 1/%s' % (stock, stock.hist_data.index[i], b, a, p, q))
         '''
+
+        self.start_analyz()
+
         return 0
 
     def init_stock_objs(self):
@@ -198,7 +201,7 @@ class RufengFinance(object):
         for code, index in self.indexes.items():
             logger.info('get all hist data of index %s' % str(index))
             df = ts.get_hist_data(index_map[code])
-            logger.info('got %d days trading  data' % len(df.index))
+            logger.info('got %d days trading data' % len(df.index))
             index.hist_data = df
 
     def load_from_db(self):
@@ -284,6 +287,12 @@ class RufengFinance(object):
         squeue.join()
         t_delta = datetime.datetime.now() - t_start
         logger.info('done getting history data by %d seconds', t_delta.days*24*3600 + t_delta.seconds)
+
+    def start_analyz(self):
+        analyzer = Analyzer(logger, self.stocks, self.indexes)
+        logger.info('-----------invoking data analyzer module-------------')
+        analyzer.analyze()
+        logger.info('-------------------analyze done----------------------')
 
 
 if __name__ == '__main__':
