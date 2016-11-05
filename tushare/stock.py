@@ -2,12 +2,19 @@
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import json
+import datetime
 from collections import MutableMapping
 
 class StockBase(object):
     def __init__(self):
+        # Basic info
         self.code = None  # 代码
         self.name = None  # 名称
+
+        # data and update info
+        self.basics_up_date = None
+        self.hist_data = None # DataFrame
+        self.hist_up_date = None
 
     def __str__(self):
         ''' convert to string '''
@@ -34,13 +41,16 @@ class StockBase(object):
     def __iter__(self):
         return self.__dict__.__iter__()
 
+    def sanitize(self):
+        if self.hist_data is not None:
+            self.hist_data.sort(axis='index')
+
 
 class Stock(StockBase):
     ''' stock class'''
     def __init__(self):
+        super(Stock, self).__init__()
         # Basics
-        self.code = None # 代码
-        self.name = None # 名称
         self.industry = None # 所属行业
         self.area = None # 地区
         self.pe = None # 市盈率
@@ -93,14 +103,52 @@ class Stock(StockBase):
         self.cashflowratio = None # 现金流量比率
 
         self.price = float('NaN')
-        self.hist_data = None # DataFrame
         self.hist_qfq = None
+        self.qfq_up_date = None
 
-        self.last_update = None
+    def sanitize(self):
+        super(Stock, self).sanitize()
+        if self.hist_qfq is not None:
+            self.hist_qfq.sort(axis='index')
 
 
 class Index(StockBase):
     def __init__(self):
-        self.hist_data = None
+        super(Index, self).__init__()
 
-        self.last_update = None
+
+class StockCalendar(object):
+    def __init__(self):
+        pass
+
+    def is_trading_day(self, date=datetime.date.today()):
+        # quick check
+        if date.weekday() > 5:
+            return False
+        # check from history
+        #if str(date) not in self.sz_index.hist_date.index:
+        #        return False
+        return True
+
+    def is_trading_now(self):
+        if not self.is_trading_day():
+            return False
+        now = datetime.now()
+        t1 = datetime(now.year, now.month, now.day, 9, 30)
+        t2 = datetime(now.year, now.month, now.day, 11, 30)
+        t3 = datetime(now.year, now.month, now.day, 13, 0)
+        t4 = datetime(now.year, now.month, now.day, 15, 0)
+
+        def time_in(t, t1, t2):
+            return (t-t1).total_seconds() >= 0 and (t2-t).total_seconds() > 0
+
+        return time_in(now, t1, t2) or time_in(now, t2, t3)
+
+    def last_complete_trade_day(self):
+        today = datetime.date.today()
+        if self.is_trading_day() and datetime.datetime.now().hour > 13:
+            return today
+        for i in range(7):
+            date = today-datetime.timedelta(days=i)
+            if self.is_trading_day(date):
+                return date

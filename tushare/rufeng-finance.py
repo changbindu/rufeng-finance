@@ -1,4 +1,4 @@
-﻿# coding=utf-8
+# coding=utf-8
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import sys
@@ -16,7 +16,7 @@ from pandas import DataFrame
 import tushare as ts
 
 import util
-from stock import Stock, Index
+from stock import Stock, Index, StockCalendar
 from analyzer import Analyzer
 
 class DataManager(object):
@@ -39,11 +39,21 @@ class DataManager(object):
             slist.append(self._stock_from_dict(dstock))
         return  slist
 
-    def save_stock(self, stock):
-        stock.last_update = datetime.datetime.now()
-        sdict = self._stock_to_dict(stock)
-        result = self.stock_collection.replace_one({'code': stock.code}, sdict, True)
-        return result
+    def save_stock(self, stock, fields=None):
+        if fields is None:
+            stock.last_update = datetime.datetime.now()
+            sdict = self._stock_to_dict(stock)
+            result = self.stock_collection.replace_one({'code': stock.code}, sdict, True)
+            return result
+        else:
+            update = {}
+            for k in fields:
+                v = stock[k]
+                if isinstance(v, DataFrame):
+                    v = v.to_dict(orient='index')
+                update[k] = v
+            result = self.stock_collection.update({'code': stock.code}, update)
+            return result
 
     def drop_stock(self):
         self.stock_collection.drop()
@@ -95,7 +105,7 @@ class RufengFinance(object):
         else:
             logger.info('force update all stocks to local database')
 
-        logger.debug('get indexes from tushare')
+        logger.info('get indexes from tushare')
         self.get_indexes()
 
         logger.info('getting last stock trading data')
@@ -244,33 +254,53 @@ class RufengFinance(object):
     def pick_hist_data(self):
         threads = []
         squeue = Queue()
-        for code, stock in self.stocks.items():
-            if stock.hist_data is None or stock.hist_qfq is None:
-                squeue.put(self.stocks[code])
+        today = datetime.date.today()
+        update_to = StockCalendar().last_complete_trade_day()
 
-        h_end = datetime.date.today()
-        h_start = h_end - datetime.timedelta(days=365)
+        for code, stock in self.stocks.items():
+            if stock.hist_data is None or stock.hist_qfq is None or \
+               stock.hist_data.head(1).index != update_to or \
+               stock.hist_qfq.head(1).index != update_to:
+                squeue.put(self.stocks[code])
 
         def __pick_history():
             while not squeue.empty():
                 stock = squeue.get()
-                logger.debug('[%d/%d]picking hist data of %s', len(self.stocks) - squeue.qsize(),
-                             len(self.stocks), stock)
+                if stock.hist_data is None:
+                    hist_start = today - datetime.timedelta(days=365)
+                else:
+                    hist_start = stock.hist_data.head(1).index
+                if stock.hist_qfq is None:
+                    qfq_start = today - datetime.timedelta(days=365)
+                else:
+                    qfq_start = stock.hist_qfq.head(1).index
+                hist = qfq = None
                 try:
-                    hist = ts.get_hist_data(stock.code, start=str(h_start), end=str(h_end), ktype='D', retry_count=5, pause=0)
-                    qfq = ts.get_h_data(stock.code, start=str(h_start), end=str(h_end))  # 前复权数据
-                except Exception as e:
+                    logger.debug('[%d/%d]picking hist data of %s from %s to %s', len(self.stocks) - squeue.qsize(),
+                                len(self.stocks), stock, hist_start, update_to)
+                    hist = ts.get_hist_data(stock.code, start=str(hist_start), end=str(update_to), ktype='D', retry_count=5, pause=0)
+                    logger.debug('[%d/%d]picking qfq data of %s from %s to %s', len(self.stocks) - squeue.qsize(),
+                                len(self.stocks), stock, qfq_start, update_to)
+                    qfq = ts.get_h_data(stock.code, start=str(qfq_start), end=str(update_to))  # 前复权数据
+                except IOError as e:
                     logger.error('exception: %s', str(e))
-                    hist = qfq = None
 
                 if hist is None:
                     logger.error('cannot get hist data of %s', stock)
+                else:
+                    stock.hist_data = hist
+                    stock.hist_up_date = today
+                    self.data_manager.save_stock(stock, ('hist_data', 'hist_up_date'))
 
-                stock.hist_data = hist
-                stock.hist_qfq = qfq
+                if qfq is None:
+                    logger.error('cannot get qfq data of %s', stock)
+                else:
+                    stock.hist_qfq = qfq
+                    stock.qfq_up_date = toady
+                    self.data_manager.save_stock(stock, ('hist_qfq', 'qfq_up_date'))
                 squeue.task_done()
 
-        logger.info('getting history data from %s to %s using %d threads', h_start, h_end, self.num_threads)
+        logger.info('getting history data of %d stocks using %d threads', squeue.qsize(), self.num_threads)
         for i in range(0, self.num_threads):
                 thread = Thread(name = "PickingThread%d" % i, target=__pick_history)
                 thread.daemon = True
