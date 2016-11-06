@@ -1,4 +1,4 @@
-# coding=utf-8
+﻿# coding=utf-8
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import sys
@@ -18,6 +18,7 @@ import tushare as ts
 import util
 from stock import Stock, Index, StockCalendar
 from analyzer import Analyzer
+
 
 class DataManager(object):
     def __init__(self):
@@ -52,7 +53,7 @@ class DataManager(object):
                 if isinstance(v, DataFrame):
                     v = v.to_dict(orient='index')
                 update[k] = v
-            result = self.stock_collection.update({'code': stock.code}, update)
+            result = self.stock_collection.update_one({'code': stock.code}, {'$set': update})
             return result
 
     def drop_stock(self):
@@ -94,16 +95,20 @@ class RufengFinance(object):
     def main(self):
         logger.info('getting basics from tushare')
         self.init_stock_objs()
-
+        self.pick_hist_data()
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logger.info('totally there are %d listed companies', len(self.stocks))
 
         if not self.force_update:
             logger.info('try load stock data from local database first')
-            self.load_from_db()
+            try:
+                self.load_from_db()
+            except KeyError as e:
+                self.logger.warn('%s, drop database', str(e))
         else:
             logger.info('force update all stocks to local database')
+            self.data_manager.drop_stock()
 
         logger.info('get indexes from tushare')
         self.get_indexes()
@@ -156,6 +161,7 @@ class RufengFinance(object):
         # dump basics of all stocks
         logger.info('all %d available stocks, saving to local database', len(self.stocks))
         for code, stock in self.stocks.items():
+            stock.sanitize()
             logger.info('%s: %d days trading data', stock, len(stock.hist_data.index))
             # stock.price = stock.hist_data[-1:]['close'][0]
             self.data_manager.save_stock(stock)
@@ -284,20 +290,21 @@ class RufengFinance(object):
                     qfq = ts.get_h_data(stock.code, start=str(qfq_start), end=str(update_to))  # 前复权数据
                 except IOError as e:
                     logger.error('exception: %s', str(e))
-
-                if hist is None:
-                    logger.error('cannot get hist data of %s', stock)
+                    logger.error('cannot get hist/qfq data of %s', stock)
+                    exit(-1)
                 else:
-                    stock.hist_data = hist
-                    stock.hist_up_date = today
-                    self.data_manager.save_stock(stock, ('hist_data', 'hist_up_date'))
+                    if stock.hist_data is not None:
+                        stock.hist_data.append(hist)
+                    else:
+                        stock.hist_data = hist
 
-                if qfq is None:
-                    logger.error('cannot get qfq data of %s', stock)
-                else:
-                    stock.hist_qfq = qfq
-                    stock.qfq_up_date = toady
-                    self.data_manager.save_stock(stock, ('hist_qfq', 'qfq_up_date'))
+                    if stock.hist_qfq is not None:
+                        stock.hist_qfq.append(qfq)
+                    else:
+                        stock.hist_qfq = qfq
+                    stock.qfq_up_date = stock.hist_up_date = today
+
+                # self.data_manager.save_stock(stock, ('hist_data', 'hist_up_date', 'hist_qfq', 'qfq_up_date'))
                 squeue.task_done()
 
         logger.info('getting history data of %d stocks using %d threads', squeue.qsize(), self.num_threads)

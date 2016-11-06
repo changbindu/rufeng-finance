@@ -29,7 +29,7 @@ class StockBase(object):
 
     def __setitem__(self, key, value):
         if key not in self.__dict__:
-            raise KeyError
+            raise KeyError('key %s is invalid' % key)
         return self.__setattr__(key, value)
 
     def __delitem__(self, key):
