@@ -21,6 +21,7 @@ from analyzer import Analyzer
 
 
 class DataManager(object):
+    """we use mongodb to cache data"""
     def __init__(self):
         client = MongoClient('localhost', 27017)
         self.db = client.rufeng_finance_database
@@ -84,18 +85,18 @@ class DataManager(object):
 
 
 class RufengFinance(object):
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.num_threads = 20
         self.stocks = {}
         self.indexes = {}
         self.data_manager = DataManager()
         self.force_update = False
 
-    def main(self):
+    def pick_data(self):
         logger.info('getting basics from tushare')
-        self.init_stock_objs()
-        self.pick_hist_data()
+        self._init_stock_objs()
+
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logger.info('totally there are %d listed companies', len(self.stocks))
@@ -103,19 +104,19 @@ class RufengFinance(object):
         if not self.force_update:
             logger.info('try load stock data from local database first')
             try:
-                self.load_from_db()
+                self._load_from_db()
             except KeyError as e:
                 self.logger.warn('%s, drop database', str(e))
+                self.data_manager.drop_stock()
         else:
             logger.info('force update all stocks to local database')
-            self.data_manager.drop_stock()
 
         logger.info('get indexes from tushare')
-        self.get_indexes()
+        self._get_indexes()
 
         logger.info('getting last stock trading data')
         df = ts.get_today_all()
-        self.extract_from_dataframe(df,
+        self._extract_from_dataframe(df,
                     ignore=('changepercent', 'open', 'high', 'low', 'settlement', 'volume', 'turnoverratio', 'amount'),
                     remap={'trade': 'price', 'per': 'pe'})
 
@@ -125,30 +126,30 @@ class RufengFinance(object):
 
         logger.info('getting last report (%d quarter %d) from tushare', report_date.year, report_quarter)
         df = ts.get_report_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df)
+        self._extract_from_dataframe(df)
 
         logger.info('getting last profit data from tushare')
         df = ts.get_profit_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df, ignore=('net_profits', 'roe', 'eps'))
+        self._extract_from_dataframe(df, ignore=('net_profits', 'roe', 'eps'))
 
         logger.info('getting last operation data from tushare')
         df = ts.get_operation_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df)
+        self._extract_from_dataframe(df)
 
         logger.info('getting last growth data from tushare')
         df = ts.get_growth_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df)
+        self._extract_from_dataframe(df)
 
         logger.info('getting last debtpaying data from tushare')
         df = ts.get_debtpaying_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df)
+        self._extract_from_dataframe(df)
 
         logger.info('getting last cashflow data from tushare')
         df = ts.get_cashflow_data(report_date.year, report_quarter)
-        self.extract_from_dataframe(df)
+        self._extract_from_dataframe(df)
 
         logger.info('getting history trading data from tushare')
-        self.pick_hist_data()
+        data_full = self._pick_hist_data()
 
         stocks_to_remove = list()
         for code, stock in self.stocks.items():
@@ -164,6 +165,7 @@ class RufengFinance(object):
             stock.sanitize()
             logger.info('%s: %d days trading data', stock, len(stock.hist_data.index))
             # stock.price = stock.hist_data[-1:]['close'][0]
+            stock.last_update = datetime.datetime.now()
             self.data_manager.save_stock(stock)
 
         '''
@@ -181,19 +183,17 @@ class RufengFinance(object):
                     print('%s chuq-uan %s: %s %s %s, 1/%s' % (stock, stock.hist_data.index[i], b, a, p, q))
         '''
 
-        self.start_analyz()
+        return data_full
 
-        return 0
-
-    def init_stock_objs(self):
-        logger.info('getting stock basics from tushare')
+    def _init_stock_objs(self):
+        logger.info('getting stock list from tushare')
         df = ts.get_stock_basics()
         for index, row in df.iterrows():
             stock = Stock()
             stock.code = index
             for col_name in df.columns:
                 # we only trust these data
-                if not col_name in ('name', 'industry', 'area'):
+                if not col_name in ('name', 'industry', 'area', 'timeToMarket'):
                     continue
                 if not hasattr(stock, col_name):
                     logger.warn('Stock obj has no attribute %s, skip', col_name)
@@ -203,7 +203,7 @@ class RufengFinance(object):
                     stock.__setattr__(col_name, value)
             self.stocks[stock.code] = stock
 
-    def get_indexes(self):
+    def _get_indexes(self):
         index_map = {'000001': 'sh', '399001': 'sz', '000300': 'hs300', '000016': 'sz50', '399101': 'zxb', '399005': 'cyb'}
         logger.info('get indexes info')
         df = ts.get_index()
@@ -220,14 +220,14 @@ class RufengFinance(object):
             logger.info('got %d days trading data' % len(df.index))
             index.hist_data = df
 
-    def load_from_db(self):
+    def _load_from_db(self):
+        count = 0
         for stock in self.data_manager.find_stock():
-            delta = datetime.datetime.now() - stock.last_update
-            if delta < datetime.timedelta(hours=12):
-                self.stocks[stock.code] = stock
-                logger.debug('stock %s is already updated at %s', stock, stock.last_update)
+            self.stocks[stock.code] = stock
+            count += 1
+        logger.info('loaded %d stocks', count)
 
-    def extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
+    def _extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
         if df is None or not isinstance(df, DataFrame):
             logger.error('cannot get data or wrong data -> %s!', df)
             return
@@ -253,56 +253,40 @@ class RufengFinance(object):
                     if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
                        new is not None and (isinstance(new, float) and not math.isnan(new)) and \
                        old != new:
-                        logger.info('field %s changed: old(%s) -> new(%s), %s',
-                                     col_name, str(old), str(new), stock)
+                        logger.info('field %s changed: old(%s) -> new(%s), %s', col_name, str(old), str(new), stock)
                     stock.__setattr__(real_field, new)
 
-    def pick_hist_data(self):
+    def _pick_hist_data(self):
         threads = []
         squeue = Queue()
         today = datetime.date.today()
         update_to = StockCalendar().last_complete_trade_day()
+        failed = False
 
         for code, stock in self.stocks.items():
-            if stock.hist_data is None or stock.hist_qfq is None or \
-               stock.hist_data.head(1).index != update_to or \
-               stock.hist_qfq.head(1).index != update_to:
-                squeue.put(self.stocks[code])
+            if stock.hist_data is None or stock.hist_qfq is None:
+                squeue.put(stock)
+            elif stock.last_update > datetime.datetime(update_to.year, update_to.month, update_to.day):
+                squeue.put(stock)
+        total_to_update = squeue.qsize()
 
         def __pick_history():
             while not squeue.empty():
                 stock = squeue.get()
-                if stock.hist_data is None:
-                    hist_start = today - datetime.timedelta(days=365)
-                else:
-                    hist_start = stock.hist_data.head(1).index
-                if stock.hist_qfq is None:
-                    qfq_start = today - datetime.timedelta(days=365)
-                else:
-                    qfq_start = stock.hist_qfq.head(1).index
-                hist = qfq = None
+                start_from = today - datetime.timedelta(days=365)
+
                 try:
-                    logger.debug('[%d/%d]picking hist data of %s from %s to %s', len(self.stocks) - squeue.qsize(),
-                                len(self.stocks), stock, hist_start, update_to)
-                    hist = ts.get_hist_data(stock.code, start=str(hist_start), end=str(update_to), ktype='D', retry_count=5, pause=0)
-                    logger.debug('[%d/%d]picking qfq data of %s from %s to %s', len(self.stocks) - squeue.qsize(),
-                                len(self.stocks), stock, qfq_start, update_to)
-                    qfq = ts.get_h_data(stock.code, start=str(qfq_start), end=str(update_to))  # 前复权数据
+                    logger.debug('[%d/%d]picking 1 year hist data of %s', total_to_update - squeue.qsize(),
+                                total_to_update, stock)
+                    hist = ts.get_hist_data(stock.code, start=str(start_from), end=str(update_to), ktype='D', retry_count=5, pause=0)
+                    qfq = None #ts.get_h_data(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
                 except IOError as e:
                     logger.error('exception: %s', str(e))
                     logger.error('cannot get hist/qfq data of %s', stock)
-                    exit(-1)
+                    failed = True
                 else:
-                    if stock.hist_data is not None:
-                        stock.hist_data.append(hist)
-                    else:
-                        stock.hist_data = hist
-
-                    if stock.hist_qfq is not None:
-                        stock.hist_qfq.append(qfq)
-                    else:
-                        stock.hist_qfq = qfq
-                    stock.qfq_up_date = stock.hist_up_date = today
+                    stock.hist_data = hist
+                    stock.hist_qfq = qfq
 
                 # self.data_manager.save_stock(stock, ('hist_data', 'hist_up_date', 'hist_qfq', 'qfq_up_date'))
                 squeue.task_done()
@@ -323,10 +307,15 @@ class RufengFinance(object):
         t_start = datetime.datetime.now()
         squeue.join()
         t_delta = datetime.datetime.now() - t_start
-        logger.info('done getting history data by %d seconds', t_delta.days*24*3600 + t_delta.seconds)
+        if (failed):
+            logger.warn('failed to pick some stocks')
+        else:
+            logger.info('done getting history data by %d seconds', t_delta.days*24*3600 + t_delta.seconds)
+        return not failed
 
-    def start_analyz(self):
-        analyzer = Analyzer(logger, self.stocks, self.indexes)
+    def start_analyze(self, analyzer):
+        analyzer.stocks = self.stocks
+        analyzer.indexs = self.indexes
         logger.info('-----------invoking data analyzer module-------------')
         analyzer.analyze()
         logger.info('-------------------analyze done----------------------')
@@ -337,6 +326,9 @@ if __name__ == '__main__':
     coloredlogs.install(level='DEBUG')
 
     logger = logging.getLogger("root")
-    ret = RufengFinance(logger).main()
+    finance = RufengFinance()
+    if finance.pick_data():
+        finance.start_analyze(Analyzer())
+    else:
+        logger.error('cannot start analyze because data is not full')
     logger.info("exiting...")
-    exit(ret)

@@ -12,9 +12,8 @@ class StockBase(object):
         self.name = None  # 名称
 
         # data and update info
-        self.basics_up_date = None
+        self.last_update = None
         self.hist_data = None # DataFrame
-        self.hist_up_date = None
 
     def __str__(self):
         ''' convert to string '''
@@ -104,7 +103,6 @@ class Stock(StockBase):
 
         self.price = float('NaN')
         self.hist_qfq = None
-        self.qfq_up_date = None
 
     def sanitize(self):
         super(Stock, self).sanitize()
