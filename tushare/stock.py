@@ -102,12 +102,9 @@ class Stock(StockBase):
         self.cashflowratio = None # 现金流量比率
 
         self.price = float('NaN')
-        self.hist_qfq = None
 
     def sanitize(self):
         super(Stock, self).sanitize()
-        if self.hist_qfq is not None:
-            self.hist_qfq.sort(axis='index')
 
 
 class Index(StockBase):

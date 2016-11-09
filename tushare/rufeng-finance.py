@@ -66,7 +66,7 @@ class DataManager(object):
         for k, v in data.items():
             if k == '_id':
                 continue
-            elif data[k] is not None and k in ('hist_data', 'hist_qfq'):
+            elif data[k] is not None and k in ('hist_data'):
                 stock.hist_data = DataFrame.from_dict(data[k], orient='index')
             else:
                 stock[k] = v
@@ -77,7 +77,7 @@ class DataManager(object):
         tmp = {}
         for k in stock.__dict__:
             v = stock.__getattribute__(k)
-            if v is not None and k in ('hist_data', 'hist_qfq'):
+            if v is not None and k in ('hist_data'):
                 tmp[k] = v.to_dict(orient='index')
             else:
                 tmp[k] = v
@@ -264,7 +264,7 @@ class RufengFinance(object):
         failed = False
 
         for code, stock in self.stocks.items():
-            if stock.hist_data is None or stock.hist_qfq is None:
+            if stock.hist_data is None:
                 squeue.put(stock)
             elif stock.last_update > datetime.datetime(update_to.year, update_to.month, update_to.day):
                 squeue.put(stock)
@@ -279,16 +279,15 @@ class RufengFinance(object):
                     logger.debug('[%d/%d]picking 1 year hist data of %s', total_to_update - squeue.qsize(),
                                 total_to_update, stock)
                     hist = ts.get_hist_data(stock.code, start=str(start_from), end=str(update_to), ktype='D', retry_count=5, pause=0)
-                    qfq = None #ts.get_h_data(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
+                    fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
                 except IOError as e:
                     logger.error('exception: %s', str(e))
                     logger.error('cannot get hist/qfq data of %s', stock)
                     failed = True
                 else:
-                    stock.hist_data = hist
-                    stock.hist_qfq = qfq
+                    stock.hist_data = hist.join(fq_factor)
 
-                # self.data_manager.save_stock(stock, ('hist_data', 'hist_up_date', 'hist_qfq', 'qfq_up_date'))
+                # self.data_manager.save_stock(stock, ('hist_data', 'hist_up_date'))
                 squeue.task_done()
 
         logger.info('getting history data of %d stocks using %d threads', squeue.qsize(), self.num_threads)
