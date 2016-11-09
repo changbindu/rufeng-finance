@@ -381,6 +381,34 @@ def get_realtime_quotes(symbols=None, retry_count=3):
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
+def get_fq_factor(code, start=None, end=None, retry_count=3, pause=0.001):
+    start = du.today_last_year() if start is None else start
+    end = du.today() if end is None else end
+    qs = du.get_quarts(start, end)
+    qt = qs[0]
+    # ct._write_head()
+    data = _parse_fq_data(_get_index_url(False, code, qt), False,
+                          retry_count, pause)
+    if data is None:
+        data = pd.DataFrame()
+    if len(qs) > 1:
+        for d in range(1, len(qs)):
+            qt = qs[d]
+            # ct._write_console()
+            df = _parse_fq_data(_get_index_url(False, code, qt), False,
+                                retry_count, pause)
+            if df is None:  # 可能df为空，退出循环
+                break
+            else:
+                data = data.append(df, ignore_index=True)
+    if len(data) == 0 or len(data[(data.date >= start) & (data.date <= end)]) == 0:
+        return None
+    data = data.drop_duplicates('date')
+    data = data.set_index('date')
+    data = data.sort_index(ascending=False)
+    return data[['factor']]
+
+
 def get_h_data(code, start=None, end=None, autype='qfq',
                index=False, retry_count=3, pause=0.001, drop_factor=True):
     '''
