@@ -86,7 +86,7 @@ class DataManager(object):
 
 class RufengFinance(object):
     def __init__(self):
-        self.num_threads = 20
+        self.max_num_threads = 20
         self.stocks = {}
         self.indexes = {}
         self.data_manager = DataManager()
@@ -96,7 +96,6 @@ class RufengFinance(object):
         logging.info('getting basics from tushare')
         self._init_stock_objs()
 
-        # self._pick_hist_data_and_save()
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logging.info('totally there are %d listed companies', len(self.stocks))
@@ -110,6 +109,8 @@ class RufengFinance(object):
                 self.data_manager.drop_stock()
         else:
             logging.info('force update all stocks to local database')
+
+        # self._pick_hist_data_and_save()
 
         logging.info('get indexes from tushare')
         self._get_indexes()
@@ -260,8 +261,10 @@ class RufengFinance(object):
         for code, stock in self.stocks.items():
             if stock.hist_data is None:
                 squeue.put(stock)
-            elif stock.last_update > datetime.datetime(update_to.year, update_to.month, update_to.day):
+            elif stock.last_update <= datetime.datetime(update_to.year, update_to.month, update_to.day):
                 squeue.put(stock)
+            else:
+                logging.debug('stock %s already updated at %s', stock, stock.last_update)
         total_to_update = squeue.qsize()
 
         def __pick_history():
@@ -281,6 +284,8 @@ class RufengFinance(object):
                 else:
                     if hist is None:
                         logging.warning('%s has no history data', stock)
+                    elif fq_factor is None:
+                        logging.warning('%s has no fq data', stock)
                     else:
                         stock.hist_data = hist.join(fq_factor)
 
@@ -290,8 +295,9 @@ class RufengFinance(object):
                         self.data_manager.save_stock(stock)
                 squeue.task_done()
 
-        logging.info('getting history data of %d stocks using %d threads', squeue.qsize(), self.num_threads)
-        for i in range(0, self.num_threads):
+        num_threads = min(self.max_num_threads, int(squeue.qsize() / 2))
+        logging.info('getting history data of %d stocks using %d threads', squeue.qsize(), num_threads)
+        for i in range(0, num_threads):
                 thread = Thread(name = "PickingThread%d" % i, target=__pick_history)
                 thread.daemon = True
                 threads.append(thread)

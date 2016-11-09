@@ -153,7 +153,7 @@ class StockCalendar(object):
         today = datetime.date.today()
         if self.is_trading_day() and datetime.datetime.now().hour > 13:
             return today
-        for i in range(7):
+        for i in range(1, 7):
             date = today-datetime.timedelta(days=i)
             if self.is_trading_day(date):
                 return date
