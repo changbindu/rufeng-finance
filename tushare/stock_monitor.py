@@ -26,8 +26,7 @@ class Stock(object):
         return '%s(%s)' % (self.code, self.name)
 
 class StockMonitor(object):
-    def __init__(self, logger, stock_configs):
-        self.logger = logger
+    def __init__(self, stock_configs):
         self.stocks = {}
         for k, v in stock_configs.items():
             stock = Stock()
@@ -41,12 +40,12 @@ class StockMonitor(object):
         sstr = ''
         for code, stock in self.stocks.items():
             sstr += str(stock) + ' '
-        logger.info('start monitor: ' + sstr)
+        logging.info('start monitor: ' + sstr)
         self.thread.start()
         self.thread.join()
 
     def _get_stock_names(self):
-        logger.info('getting stock basics from tushare')
+        logging.info('getting stock basics from tushare')
         df = ts.get_stock_basics()
         for index, row in df.iterrows():
             if index in self.stocks:
@@ -64,18 +63,17 @@ class StockMonitor(object):
 
     def _monitor_policy(self, stock, quotes, indexes):
         if float(quotes['price']) > stock.config['high']:
-            logger.info('%s: price high than %s now' % (stock, stock.config['high']))
+            logging.info('%s: price high than %s now' % (stock, stock.config['high']))
 
 
 if __name__ == '__main__':
     coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s'
     coloredlogs.install(level='DEBUG')
-    logger = logging.getLogger("root")
 
     stock_configs = {
         '002341': {'high': 20.0, 'low': 19.0, 'up_percent': 5.0, 'down_percent': -5.0},
         '300195': {'high': 19.0, 'low': 18.0, 'up_percent': 5.0, 'down_percent': -5.0},
     }
 
-    StockMonitor(logger, stock_configs).start_and_join()
-    logger.info("exiting...")
+    StockMonitor(stock_configs).start_and_join()
+    logging.info("exiting...")

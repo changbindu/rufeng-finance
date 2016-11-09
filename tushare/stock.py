@@ -42,7 +42,7 @@ class StockBase(object):
 
     def sanitize(self):
         if self.hist_data is not None:
-            self.hist_data.sort(axis='index')
+            self.hist_data.sort_index(inplace=True)
 
 
 class Stock(StockBase):

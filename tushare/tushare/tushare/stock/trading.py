@@ -403,10 +403,14 @@ def get_fq_factor(code, start=None, end=None, retry_count=3, pause=0.001):
                 data = data.append(df, ignore_index=True)
     if len(data) == 0 or len(data[(data.date >= start) & (data.date <= end)]) == 0:
         return None
+
+    data = data[['factor', 'date']]
+    data['factor'] = data['factor'].astype(float)
+    data['date'] = data['date'].astype(str)
     data = data.drop_duplicates('date')
     data = data.set_index('date')
     data = data.sort_index(ascending=False)
-    return data[['factor']]
+    return data
 
 
 def get_h_data(code, start=None, end=None, autype='qfq',
