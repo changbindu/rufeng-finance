@@ -106,6 +106,16 @@ class Stock(StockBase):
     def sanitize(self):
         super(Stock, self).sanitize()
 
+    def get_qfq_data(self):
+        df = None
+        max_factor = self.hist_data.tail(1).factor[0]
+        for i in range(1, len(self.hist_data.index) - 1):
+            factor = self.hist_data.factor[i]
+            line = self.hist_data[i:i+1][['open', 'close', 'low', 'high', 'volume']]
+            tmp = line*(max_factor/factor)
+            df = tmp if df is None else df.append(tmp)
+        df.sort_index(inplace=True)
+        return df
 
 class Index(StockBase):
     def __init__(self):

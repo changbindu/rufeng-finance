@@ -29,10 +29,10 @@ class DataManager(object):
         self.indexes_collection = self.db.indexes
 
     def find_one_stock(self, code):
-        cursor = self.stock_collection.find_one({'code': code})
-        if cursor is None:
+        dstock = self.stock_collection.find_one({'code': code})
+        if dstock is None:
             return None
-        return self._stock_from_dict(cursor[0])
+        return self._stock_from_dict(dstock)
 
     def find_stock(self, filter=None):
         slist = []
@@ -96,7 +96,7 @@ class RufengFinance(object):
         logging.info('getting basics from tushare')
         self._init_stock_objs()
 
-        self._pick_hist_data_and_save()
+        # self._pick_hist_data_and_save()
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logging.info('totally there are %d listed companies', len(self.stocks))
@@ -106,7 +106,7 @@ class RufengFinance(object):
             try:
                 self._load_from_db()
             except KeyError as e:
-                logging.warn('%s, drop database', str(e))
+                logging.warning('%s, drop database', str(e))
                 self.data_manager.drop_stock()
         else:
             logging.info('force update all stocks to local database')
@@ -304,8 +304,9 @@ class RufengFinance(object):
                 logger.warning("Thread %s timeout" %t.name)
         '''
         t_start = datetime.datetime.now()
-        while squeue.unfinished_tasks:
-            time.sleep(1)
+        #while squeue.unfinished_tasks:
+        #    time.sleep(1)
+        squeue.join()
         t_delta = datetime.datetime.now() - t_start
         if (failed):
             logging.warning('failed to pick some stocks')

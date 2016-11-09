@@ -10,4 +10,22 @@ class Analyzer(object):
         self.indexs = indexes
 
     def analyze(self):
+        selected = [s for _, s in self.stocks]
+
+        for stock in selected:
+            if not self._analyze_single_stock(stock):
+                selected.remove(stock)
+
+        logging.info('list of good stocks:')
+        for stock in selected:
+            logging.info('%s', stock)
+
+    def _analyze_index(self):
         pass
+
+    def _analyze_single_stock(self, stock):
+        """return if this stock is good"""
+        if stock.price > 30:
+            logging.debug('%s: price too high, %d > 30', stock, stock.price)
+            return False
+        return True
