@@ -298,7 +298,7 @@ class DataManager(object):
         def __pick_history():
             while not squeue.empty():
                 stock = squeue.get()
-                start_from = today - datetime.timedelta(days=365)
+                start_from = today - datetime.timedelta(days=365*3)
 
                 try:
                     logging.debug('[%d/%d]picking 1 year hist data of %s', total_to_update - squeue.qsize(),
