@@ -106,7 +106,8 @@ class Stock(StockBase):
     def sanitize(self):
         super(Stock, self).sanitize()
 
-    def get_qfq_data(self):
+    @property
+    def qfq_data(self):
         df = None
         max_factor = self.hist_data.tail(1).factor[0]
         for i in range(1, len(self.hist_data.index) - 1):
@@ -116,6 +117,7 @@ class Stock(StockBase):
             df = tmp if df is None else df.append(tmp)
         df.sort_index(inplace=True)
         return df
+
 
 class Index(StockBase):
     def __init__(self):
