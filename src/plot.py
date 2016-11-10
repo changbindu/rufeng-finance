@@ -21,6 +21,7 @@ class StockPlot(object):
 
         plt.xlabel('Date')
         plt.ylabel('Price')
+        plt.ylim(ymin=stock.hist_min-stock.hist_min/30, ymax=stock.hist_max+stock.hist_max/30)
         ax1.grid(True)
         xrange = range(0, stock.hist_len, int(stock.hist_len / 5))
         plt.xticks(xrange, [stock.get_hist_date(loc) for loc in xrange])

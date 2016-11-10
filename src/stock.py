@@ -48,6 +48,14 @@ class StockBase(object):
     def hist_len(self):
         return self.hist_data is None and 0 or len(self.hist_data.index)
 
+    @property
+    def hist_max(self):
+        return self.hist_data.high.max()
+
+    @property
+    def hist_min(self):
+        return self.hist_data.low.min()
+
     def get_hist_date(self, loc):
         return self.hist_data.index[loc]
 
