@@ -1,0 +1,11 @@
+monitor:
+  '002341':
+    high: 20.0
+    low: 19.0
+    up_percent: 5.0
+    down_percent: -5.0
+  '300195':
+    high: 19.0
+    low: 18.0
+    up_percent: 5.0
+    down_percent: -5.0

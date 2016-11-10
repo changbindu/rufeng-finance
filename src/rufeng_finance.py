@@ -91,11 +91,9 @@ class RufengFinance(object):
         logging.info('-------------------analyze done----------------------')
 
     def cmd_monitor(self, options, cmd_args):
-        stock_configs = {
-            '002341': {'high': 20.0, 'low': 19.0, 'up_percent': 5.0, 'down_percent': -5.0},
-            '300195': {'high': 19.0, 'low': 18.0, 'up_percent': 5.0, 'down_percent': -5.0},
-        }
-        StockMonitor(stock_configs).start_and_join()
+        config = self._config['monitor']
+        logging.info('monitor config:\n%s', yaml.dump(config))
+        StockMonitor(config).start_and_join()
 
 if __name__ == '__main__':
     # coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s[%(process)d] %(levelname)s %(message)s'
