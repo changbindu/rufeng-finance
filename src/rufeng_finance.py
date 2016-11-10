@@ -2,8 +2,8 @@
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import sys
-if sys.version_info < (3, 4):
-    raise RuntimeError('at least Python 3.4 is required to run')
+if sys.version_info < (3, 0):
+    raise RuntimeError('Python3 is required')
 sys.path.insert(0, 'tushare')
 
 import logging.config, coloredlogs
@@ -95,13 +95,11 @@ class RufengFinance(object):
             return -1
         code = cmd_args[0]
 
-        self._dm.load_from_db()
-
-        if code not in self._dm.stocks:
+        stock = self._dm.find_one_stock_from_db(code)
+        if stock is None:
             logging.error('unknown stock %s', code)
             return
 
-        stock = self._dm.stocks[code]
         print("show diagram for stock %s ...", stock)
         if options.qfq:
             StockPlot().plot_qfq(stock)

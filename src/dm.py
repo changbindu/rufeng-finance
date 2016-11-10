@@ -353,3 +353,6 @@ class DataManager(object):
         for code, stock in self._stocks.items():
             logging.info('%s: price %s, %d days trading data, last update at %s',
                          stock, stock.price, len(stock.hist_data.index), stock.last_update)
+
+    def find_one_stock_from_db(self, code):
+        return self._local_dm.find_one_stock(code)
