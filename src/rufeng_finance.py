@@ -13,7 +13,7 @@ import yaml
 from analyzer import Analyzer
 from dm import DataManager
 from monitor import StockMonitor
-
+from plot import StockPlot
 
 class RufengFinance(object):
     def __init__(self):
@@ -29,18 +29,27 @@ class RufengFinance(object):
                 "\n  analyze  - analyze our stocks" + \
                 "\n  monitor  - monitor realtime status"
         parser = OptionParser(usage=usage)
+
+        parser.add_option("--config",
+                          metavar="FILE", dest="config", default="config.yaml",
+                          help="specific config file"),
+
+        parser.add_option("-s", "--selector",
+                      default="all", dest="selector",
+                      help="selectors: all, trend, macd, or hot [default: %default]")
+
+        # for download options
         parser.add_option("-t", "--threads",
                           type="int", dest="threads", default=20,
                           help="threads number to work")
         parser.add_option("-a", "--force_update",
                           action="store_true", dest="force_update", default=False,
                           help="download data ignore local existing data")
-        parser.add_option("--config",
-                          metavar="FILE", dest="config", default="config.yaml",
-                          help="specific config file"),
-        parser.add_option("-s", "--selector",
-                          default="all", dest="selector",
-                          help="selectors: all, trend, macd, or hot [default: %default]")
+
+        # for plot options
+        parser.add_option("--qfq",
+                          action="store_true", dest="qfq", default=False,
+                          help="plot: show forward adjusted history price")
 
         (options, args) = parser.parse_args()
         if len(args) < 1:
@@ -52,7 +61,7 @@ class RufengFinance(object):
         cmd_map = {
             'download': self.cmd_download,
             'list':     self.cmd_list,
-            'plog':     None,
+            'plot':     self.cmd_plot,
             'analyze':  self.cmd_analyze,
             'monitor':  self.cmd_monitor
         }
@@ -79,6 +88,25 @@ class RufengFinance(object):
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db()
         self._dm.list_availabe_stocks()
+
+    def cmd_plot(self, options, cmd_args):
+        if len(cmd_args) != 1:
+            logging.error("missing argument stock code")
+            return -1
+        code = cmd_args[0]
+
+        self._dm.load_from_db()
+
+        if code not in self._dm.stocks:
+            logging.error('unknown stock %s', code)
+            return
+
+        stock = self._dm.stocks[code]
+        print("show diagram for stock %s ...", stock)
+        if options.qfq:
+            StockPlot().plot_qfq(stock)
+        else:
+            StockPlot().plot_hist(stock)
 
     def cmd_analyze(self, options, cmd_args):
         self._dm.load_from_db()
