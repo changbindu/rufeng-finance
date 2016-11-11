@@ -44,6 +44,21 @@ class StockBase(object):
         if self.hist_data is not None:
             self.hist_data.sort_index(inplace=True)
 
+    @property
+    def hist_len(self):
+        return self.hist_data is None and 0 or len(self.hist_data.index)
+
+    @property
+    def hist_max(self):
+        return self.hist_data.high.max()
+
+    @property
+    def hist_min(self):
+        return self.hist_data.low.min()
+
+    def get_hist_date(self, loc):
+        return self.hist_data.index[loc]
+
 
 class Stock(StockBase):
     ''' stock class'''
@@ -149,7 +164,7 @@ class StockCalendar(object):
         def time_in(t, t1, t2):
             return (t-t1).total_seconds() >= 0 and (t2-t).total_seconds() > 0
 
-        return time_in(now, t1, t2) or time_in(now, t2, t3)
+        return time_in(now, t1, t2) or time_in(now, t3, t4)
 
     def last_complete_trade_day(self):
         today = datetime.date.today()
