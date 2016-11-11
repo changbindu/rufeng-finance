@@ -11,14 +11,13 @@ class Analyzer(object):
 
     def analyze(self):
         selected = [s for _, s in self.stocks.items()]
+        global_status = False
 
         for stock in selected:
             if not self._analyze_single_stock(stock):
                 selected.remove(stock)
 
-        logging.info('list of good %d stocks:', len(selected))
-        for stock in selected:
-            logging.info('%s', stock)
+        return selected, global_status
 
     def _analyze_index(self):
         pass

@@ -99,6 +99,8 @@ class DataManager(object):
         self._indexes = {}
         self._local_dm = LocalDataManager()
 
+        self._data_period_y = 3  # years
+
     @property
     def stocks(self):
         return self._stocks
@@ -106,6 +108,17 @@ class DataManager(object):
     @property
     def indexes(self):
         return self._indexes
+
+    @property
+    def data_period_y(self):
+        return self._data_period_y
+
+    @data_period_y.setter
+    def data_period_y(self, value):
+        if not 0 < value <= 3:
+            logging.warning('data_period value invalid, set to default 1')
+            value = 1
+        self._data_period_y = value
 
     def pick_data(self, max_num_threads = 20, force_update = False):
         """
@@ -120,7 +133,7 @@ class DataManager(object):
 
         if not force_update:
             try:
-                self.load_from_db()
+                self.load_from_db(remove_invalid=False)
             except KeyError as e:
                 logging.warning('%s, drop database', str(e))
                 self._local_dm.drop_stock()
@@ -220,11 +233,11 @@ class DataManager(object):
         for code, index in self._indexes.items():
             logging.info('get all hist data of index %s' % str(index))
             df = ts.get_hist_data(index_map[code])
-            logging.info('got %d days trading data' % len(df.index))
+            logging.info('got %d days trading data' % df.index.size)
             index.hist_data = df
             self._local_dm.save_index(index)
 
-    def load_from_db(self):
+    def load_from_db(self, remove_invalid=True):
         """load stocks from local database only"""
         logging.info('try load stock data from local database')
         count = 0
@@ -238,7 +251,9 @@ class DataManager(object):
             self._indexes[index.code] = index
             count += 1
         logging.info('loaded %d indexes', count)
-        self._remove_unavailable_stocks()
+
+        if remove_invalid:
+            self._remove_unavailable_stocks()
 
     def _extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
         if df is None or not isinstance(df, DataFrame):
@@ -266,24 +281,23 @@ class DataManager(object):
                     if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
                        new is not None and (isinstance(new, float) and not math.isnan(new)) and \
                        old != new:
-                        logging.info('field %s changed: old(%s) -> new(%s), %s', col_name, str(old), str(new), stock)
+                        logging.debug('field %s changed: old(%s) -> new(%s), %s', col_name, str(old), str(new), stock)
                     stock.__setattr__(real_field, new)
 
     def _remove_unavailable_stocks(self):
         stocks_to_remove = list()
         for code, stock in self._stocks.items():
-            if stock.hist_data is None or len(stock.hist_data.index) == 0:
+            if stock.hist_data is None or stock.hist_data.index.size == 0:
                 stocks_to_remove.append(stock)
         for stock in stocks_to_remove:
             del self._stocks[stock.code]
             logging.warning('removed unavailable stock %s (maybe not IPO yet)', stock)
-        logging.info('all %d available stocks will be analyzed', len(self._stocks))
 
     def _pick_hist_data_and_save(self, max_num_threads):
         threads = []
         squeue = Queue()
         today = datetime.date.today()
-        update_to = StockCalendar().last_complete_trade_day()
+        update_to = StockCalendar().last_completed_trade_day()
         failed = False
 
         for code, stock in self._stocks.items():
@@ -298,7 +312,7 @@ class DataManager(object):
         def __pick_history():
             while not squeue.empty():
                 stock = squeue.get()
-                start_from = today - datetime.timedelta(days=365*3)
+                start_from = today - datetime.timedelta(days=365*self._data_period_y)
 
                 try:
                     logging.debug('[%d/%d]picking 1 year hist data of %s', total_to_update - squeue.qsize(),
@@ -318,7 +332,7 @@ class DataManager(object):
                         stock.hist_data = hist.join(fq_factor)
 
                         stock.sanitize()
-                        logging.debug('%s: %d days trading data', stock, len(stock.hist_data.index))
+                        logging.debug('%s: %d days trading data', stock, stock.hist_data.index.size)
                         stock.last_update = datetime.datetime.now()
                         self._local_dm.save_stock(stock)
                 squeue.task_done()
@@ -347,12 +361,6 @@ class DataManager(object):
         else:
             logging.info('done getting history data by %d seconds', t_delta.days*24*3600 + t_delta.seconds)
         return not failed
-
-    def list_availabe_stocks(self):
-        logging.info('all %d available stocks will be analyzed', len(self._stocks))
-        for code, stock in self._stocks.items():
-            logging.info('%s: price %s, %d days trading data, last update at %s',
-                         stock, stock.price, len(stock.hist_data.index), stock.last_update)
 
     def find_one_stock_from_db(self, code):
         return self._local_dm.find_one_stock(code)

@@ -81,13 +81,19 @@ class RufengFinance(object):
         return 0
 
     def cmd_download(self, options, cmd_args):
+        self._dm.data_period_y = self._config['core']['data_period']
         data_full = self._dm.pick_data(options.threads, options.force_update)
         if not data_full:
             logging.warning('not all data successfully picked')
 
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db()
-        self._dm.list_availabe_stocks()
+        logging.info('all %d available stocks can be analyzed', len(self._dm.stocks))
+        for code, stock in self._dm.stocks.items():
+            logging.info('%s: price %s, %d days trading data [%s - %s], update at %s',
+                         stock, stock.price, stock.hist_data.index.size,
+                         stock.hist_data.tail(1).index[0], stock.hist_data.index[0],
+                         stock.last_update.strftime("%Y-%m-%d %H:%M:%S"))
 
     def cmd_plot(self, options, cmd_args):
         if len(cmd_args) != 1:
@@ -112,9 +118,14 @@ class RufengFinance(object):
         analyzer = Analyzer()
         analyzer.stocks = self._dm.stocks
         analyzer.indexs = self._dm.indexes
+        logging.info('all %d available stocks will be analyzed', len(analyzer.stocks))
         logging.info('-----------invoking data analyzer module-------------')
-        analyzer.analyze()
+        selected_stocks, global_status = analyzer.analyze()
         logging.info('-------------------analyze done----------------------')
+        logging.info('list of good %d stocks:', len(selected_stocks))
+        for stock in selected_stocks:
+            logging.info('%s', stock)
+        logging.info('global market status: %s', 'Good!' if global_status else 'Bad!')
 
     def cmd_monitor(self, options, cmd_args):
         config = self._config['monitor']

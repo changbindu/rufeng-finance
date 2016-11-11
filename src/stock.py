@@ -46,7 +46,7 @@ class StockBase(object):
 
     @property
     def hist_len(self):
-        return self.hist_data is None and 0 or len(self.hist_data.index)
+        return self.hist_data is None and 0 or self.hist_data.index.size
 
     @property
     def hist_max(self):
@@ -125,7 +125,7 @@ class Stock(StockBase):
     def qfq_data(self):
         df = None
         max_factor = self.hist_data.tail(1).factor[0]
-        for i in range(1, len(self.hist_data.index) - 1):
+        for i in range(1, self.hist_data.index.size - 1):
             factor = self.hist_data.factor[i]
             line = self.hist_data[i:i+1][['open', 'close', 'low', 'high', 'volume']]
             tmp = line/(max_factor/factor)
@@ -166,7 +166,7 @@ class StockCalendar(object):
 
         return time_in(now, t1, t2) or time_in(now, t3, t4)
 
-    def last_complete_trade_day(self):
+    def last_completed_trade_day(self):
         today = datetime.date.today()
         if self.is_trading_day() and datetime.datetime.now().hour > 13:
             return today
