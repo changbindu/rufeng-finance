@@ -4,6 +4,7 @@ __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 import json
 import datetime
 from collections import MutableMapping
+from pandas import DataFrame
 
 class StockBase(object):
     def __init__(self):
@@ -42,7 +43,7 @@ class StockBase(object):
 
     def sanitize(self):
         if self.hist_data is not None:
-            self.hist_data.sort_index(inplace=True)
+            self.hist_data.sort_index(ascending=False, inplace=True)
 
     @property
     def hist_len(self):
@@ -123,14 +124,14 @@ class Stock(StockBase):
 
     @property
     def qfq_data(self):
-        df = None
+        df = DataFrame()
         max_factor = self.hist_data.tail(1).factor[0]
-        for i in range(1, self.hist_data.index.size - 1):
+        for i in range(self.hist_data.index.size):
             factor = self.hist_data.factor[i]
-            line = self.hist_data[i:i+1][['open', 'close', 'low', 'high', 'volume']]
-            tmp = line/(max_factor/factor)
-            df = tmp if df is None else df.append(tmp)
-        df.sort_index(inplace=True)
+            line = self.hist_data[i:i+1][['open', 'close', 'low', 'high']]
+            df = df.append(line/(max_factor/factor))
+        df = df.join(self.hist_data[['volume', 'turnover']])
+        df.sort_index(ascending=False, inplace=True)
         return df
 
 

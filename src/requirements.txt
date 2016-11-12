@@ -8,3 +8,4 @@ scipy>=0.17.1
 simplejson>=3.8.2
 six>=1.10.0
 pyyaml
+tqdm

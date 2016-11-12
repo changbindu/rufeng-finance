@@ -10,6 +10,7 @@ from pymongo import MongoClient
 from pandas import DataFrame
 import tushare as ts
 import logging
+from tqdm import tqdm
 
 import util
 from stock import Stock, Index, StockCalendar
@@ -31,13 +32,16 @@ class LocalDataManager(object):
         stock.sanitize()
         return stock
 
-    def find_stock(self, filter=None):
+    def find_stock(self, filter=None, show_process=False):
         slist = []
         cursor = self.stock_collection.find(filter)
-        for dstock in cursor:
-            stock = self.__from_dict(dstock)
-            stock.sanitize()
-            slist.append(stock)
+        with tqdm(total=cursor.count()) as pbar:
+            for dstock in cursor:
+                stock = self.__from_dict(dstock)
+                stock.sanitize()
+                slist.append(stock)
+                show_process and pbar.update()
+
         return slist
 
     def save_stock(self, stock, fields=None):
@@ -245,7 +249,7 @@ class DataManager(object):
         """load stocks from local database only"""
         logging.info('try load stock data from local database')
         count = 0
-        for stock in self._local_dm.find_stock():
+        for stock in self._local_dm.find_stock(show_process=True):
             self._stocks[stock.code] = stock
             count += 1
         logging.info('loaded %d stocks', count)
@@ -319,8 +323,8 @@ class DataManager(object):
                 start_from = today - datetime.timedelta(days=365*self._data_period_y)
 
                 try:
-                    logging.debug('[%d/%d]picking 1 year hist data of %s', total_to_update - squeue.qsize(),
-                                total_to_update, stock)
+                    logging.debug('[%d/%d]picking %d year hist data of %s', total_to_update - squeue.qsize(),
+                                total_to_update, self._data_period_y, stock)
                     hist = ts.get_hist_data(stock.code, start=str(start_from), end=str(update_to), ktype='D', retry_count=5, pause=0)
                     fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
                 except IOError as e:
