@@ -13,20 +13,21 @@ from matplotlib.finance import candlestick2_ochl, volume_overlay
 import matplotlib.ticker as mticker
 import matplotlib.dates as mdates
 
-mpl.rcParams['font.sans-serif'] = ['FangSong']
+# mpl.rcParams['font.sans-serif'] = ['FangSong']
 mpl.rcParams['axes.unicode_minus'] = False
 
 class StockPlot(object):
     """ref: https://gist.github.com/ithurricane/240b4aa954e09915b24697ca5f2aa1db"""
     def __init__(self):
-        pass
+        self.display_size = (5, 5)
+        self.save_size = (40, 20)
 
-    def _plot(self, stock, qfq=False):
+    def _plot(self, stock, figsize, qfq=False):
         data = stock.qfq_data if qfq else stock.hist_data
         data = data.sort_index(ascending=True, inplace=False)
 
         fp = FontProperties(fname='simsun.ttc')
-        fig = plt.figure(figsize=(5,5), dpi=100)
+        fig = plt.figure(figsize=figsize, dpi=100)
         fig.subplots_adjust(left=.10, bottom=.09, right=.93, top=.95, wspace=.20, hspace=0)
 
         gs = gridspec.GridSpec(3, 1, height_ratios=[4, 1, 1])
@@ -54,10 +55,8 @@ class StockPlot(object):
         plt.ylabel('Price')
         plt.ylim(ymin=stock.hist_min-stock.hist_min/30, ymax=stock.hist_max+stock.hist_max/30)
         ax0.grid(True)
-        xrange = range(0, data.index.size, int(data.index.size / 5))
+        xrange = range(0, data.index.size, max(int(data.index.size / 5), 5))
         plt.xticks(xrange, [data.index[loc] for loc in xrange])
-        for label in ax0.xaxis.get_ticklabels():
-            label.set_rotation(45)
         plt.setp(ax0.get_xticklabels(), visible=False)
 
         ax1 = plt.subplot(gs[1], sharex=ax0)
@@ -76,6 +75,8 @@ class StockPlot(object):
         volume_overlay(ax2, data.open, data.close, data.turnover,
                        width=.75, colorup='g', colordown='r', alpha=0.75)
         ax2.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%.2f%%' % (x)))
+        for label in ax2.xaxis.get_ticklabels():
+            label.set_rotation(0)
         ax2.set_ylabel('Turnover')
 
         ax2.set_xlabel('Date')
@@ -86,10 +87,20 @@ class StockPlot(object):
             plt.title('History Price')
         # plt.legend(prop=fp)
 
-    def plot_hist(self, stock):
-        self._plot(stock)
-        plt.show()
+    def plot_hist(self, stock, path=None):
+        if path is None:
+            self._plot(stock, self.display_size)
+            plt.show()
+        else:
+            self._plot(stock, self.save_size)
+            plt.savefig(path)
+        plt.close()
 
-    def plot_qfq(self, stock):
-        self._plot(stock, qfq=True)
-        plt.show()
+    def plot_qfq(self, stock, path=None):
+        if path is None:
+            self._plot(stock, self.display_size, qfq=True)
+            plt.show()
+        else:
+            self._plot(stock, self.save_size, qfq=True)
+            plt.savefig(path)
+        plt.close()

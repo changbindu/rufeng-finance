@@ -6,6 +6,7 @@ if sys.version_info < (3, 0):
     raise RuntimeError('Python3 is required')
 sys.path.insert(0, 'tushare')
 
+import os
 import logging.config, coloredlogs
 from optparse import OptionParser
 import yaml
@@ -33,6 +34,10 @@ class RufengFinance(object):
         parser.add_option("--config",
                           metavar="FILE", dest="config", default="config.yaml",
                           help="specific config file"),
+
+        parser.add_option("-o", "--output",
+                          metavar="FILE", dest="output",
+                          help="specific output dir or file"),
 
         parser.add_option("-s", "--selector",
                       default="all", dest="selector",
@@ -107,11 +112,19 @@ class RufengFinance(object):
             logging.error('unknown stock %s', code)
             return
 
-        print("show diagram for stock %s ...", stock)
-        if options.qfq:
-            StockPlot().plot_qfq(stock)
+        path = options.output
+        if path:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            if os.path.isdir(path):
+                path = os.path.join(options.output, '%s.png' % stock.code)
+            print('draw diagram for stock %s to %s' % (stock, path))
         else:
-            StockPlot().plot_hist(stock)
+            print('show diagram for stock %s ...' % stock)
+        if options.qfq:
+            StockPlot().plot_qfq(stock, path)
+        else:
+            StockPlot().plot_hist(stock, path)
 
     def cmd_analyze(self, options, cmd_args):
         config = self._config['analyzer']
@@ -123,10 +136,16 @@ class RufengFinance(object):
         logging.info('-----------invoking data analyzer module-------------')
         selected_stocks, global_status = analyzer.analyze()
         logging.info('-------------------analyze done----------------------')
-        logging.info('list of good %d stocks:' % len(selected_stocks))
+        logging.info('list of good %d stocks%s:' % (len(selected_stocks),
+                     options.output and ' and save plots to %s' % options.output or ''))
         for stock in selected_stocks:
             logging.info('%s', stock)
+            if options.output:
+                if not os.path.exists(options.output):
+                    os.makedirs(options.output)
+                StockPlot().plot_hist(stock, os.path.join(options.output, '%s.png' % stock.code))
         logging.info('global market status: %s', 'Good!' if global_status else 'Bad!')
+
 
     def cmd_monitor(self, options, cmd_args):
         config = self._config['monitor']
