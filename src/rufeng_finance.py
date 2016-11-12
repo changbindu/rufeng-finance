@@ -102,29 +102,29 @@ class RufengFinance(object):
                          stock.last_update.strftime("%Y-%m-%d %H:%M:%S")))
 
     def cmd_plot(self, options, cmd_args):
-        if len(cmd_args) != 1:
+        if len(cmd_args) < 1:
             logging.error("missing argument stock code")
             return -1
-        code = cmd_args[0]
 
-        stock = self._dm.find_one_stock_from_db(code)
-        if stock is None:
-            logging.error('unknown stock %s', code)
-            return
+        for code in cmd_args:
+            stock = self._dm.find_one_stock_from_db(code)
+            if stock is None:
+                logging.error('unknown stock %s', code)
+                return
 
-        path = options.output
-        if path:
-            if not os.path.exists(path):
-                os.makedirs(path)
-            if os.path.isdir(path):
-                path = os.path.join(options.output, '%s.png' % stock.code)
-            print('draw diagram for stock %s to %s' % (stock, path))
-        else:
-            print('show diagram for stock %s ...' % stock)
-        if options.qfq:
-            StockPlot().plot_qfq(stock, path)
-        else:
-            StockPlot().plot_hist(stock, path)
+            path = options.output
+            if path:
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                if os.path.isdir(path):
+                    path = os.path.join(options.output, '%s.png' % stock.code)
+                print('draw diagram for stock %s to %s' % (stock, path))
+            else:
+                print('show diagram for stock %s ...' % stock)
+            if options.qfq:
+                StockPlot().plot_qfq(stock, path)
+            else:
+                StockPlot().plot_hist(stock, path)
 
     def cmd_analyze(self, options, cmd_args):
         config = self._config['analyzer']
