@@ -27,14 +27,18 @@ class LocalDataManager(object):
         dstock = self.stock_collection.find_one({'code': code})
         if dstock is None:
             return None
-        return self.__from_dict(dstock)
+        stock = self.__from_dict(dstock)
+        stock.sanitize()
+        return stock
 
     def find_stock(self, filter=None):
         slist = []
         cursor = self.stock_collection.find(filter)
         for dstock in cursor:
-            slist.append(self.__from_dict(dstock))
-        return  slist
+            stock = self.__from_dict(dstock)
+            stock.sanitize()
+            slist.append(stock)
+        return slist
 
     def save_stock(self, stock, fields=None):
         if fields is None:

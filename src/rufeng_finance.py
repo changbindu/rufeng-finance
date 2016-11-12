@@ -41,10 +41,10 @@ class RufengFinance(object):
         # for download options
         parser.add_option("-t", "--threads",
                           type="int", dest="threads", default=20,
-                          help="threads number to work")
+                          help="download: threads number to work")
         parser.add_option("-a", "--force_update",
                           action="store_true", dest="force_update", default=False,
-                          help="download data ignore local existing data")
+                          help="download: download data ignore local existing data")
 
         # for plot options
         parser.add_option("--qfq",
@@ -89,11 +89,12 @@ class RufengFinance(object):
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db()
         logging.info('all %d available stocks can be analyzed', len(self._dm.stocks))
+        logging.info('%-6s %-8s %6s %-30s %-18s' % ('code', 'name', 'price', 'hist_data', 'update'))
         for code, stock in self._dm.stocks.items():
-            logging.info('%s: price %s, %d days trading data [%s - %s], update at %s',
-                         stock, stock.price, stock.hist_data.index.size,
-                         stock.hist_data.tail(1).index[0], stock.hist_data.index[0],
-                         stock.last_update.strftime("%Y-%m-%d %H:%M:%S"))
+            logging.info('%-6s %-4s %5.2f %-30s %-18s' % (
+                         stock.code, stock.name, stock.price,
+                         '%4d[%s - %s]' % (stock.hist_data.index.size, stock.hist_data.tail(1).index[0], stock.hist_data.index[0]),
+                         stock.last_update.strftime("%Y-%m-%d %H:%M:%S")))
 
     def cmd_plot(self, options, cmd_args):
         if len(cmd_args) != 1:
