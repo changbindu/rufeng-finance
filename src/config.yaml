@@ -1,14 +1,22 @@
 core:
-  data_period: 3 # year
-  max_threads: 20
+  data_period:    3 # years
+  max_threads:    20
+analyzer:
+  min_hist_data:  60 # days
+  max_price:      20
+  max_nmc:        100 # yi
+  max_pe:         400
+  exclude_gem:    false
+  min_d5_turnover_avg: 3.0
+  max_position:   0.6
 monitor:
   '002341':
-    high: 20.0
-    low: 19.0
-    up_percent: 5.0
+    high:         20.0
+    low:          19.0
+    up_percent:   5.0
     down_percent: -5.0
   '300195':
-    high: 19.0
-    low: 18.0
-    up_percent: 5.0
+    high:         19.0
+    low:          18.0
+    up_percent:   5.0
     down_percent: -5.0

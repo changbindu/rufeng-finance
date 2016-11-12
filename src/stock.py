@@ -60,6 +60,10 @@ class StockBase(object):
     def get_hist_date(self, loc):
         return self.hist_data.index[loc]
 
+    def get_turnover_avg(self, days):
+        days = max(days, 1)
+        return sum(self.hist_data.turnover[0:days])/5
+
 
 class Stock(StockBase):
     ''' stock class'''

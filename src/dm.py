@@ -41,7 +41,7 @@ class LocalDataManager(object):
                 stock.sanitize()
                 slist.append(stock)
                 show_process and pbar.update()
-
+        pbar.close()
         return slist
 
     def save_stock(self, stock, fields=None):
@@ -137,13 +137,13 @@ class DataManager(object):
 
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
-        logging.info('totally there are %d listed companies', len(self._stocks))
+        logging.info('totally there are %d listed companies' % len(self._stocks))
 
         if not force_update:
             try:
                 self.load_from_db(remove_invalid=False)
             except KeyError as e:
-                logging.warning('%s, drop database', str(e))
+                logging.warning('%s, drop database' % str(e))
                 self._local_dm.drop_stock()
         else:
             logging.info('force update all stocks, ignore local database')
@@ -163,7 +163,7 @@ class DataManager(object):
         report_date = datetime.date.today() - datetime.timedelta(days=60)
         report_quarter = math.ceil(report_date.month/3.0)
 
-        logging.info('getting last report (%d quarter %d) from tushare', report_date.year, report_quarter)
+        logging.info('getting last report (%d quarter %d) from tushare' % (report_date.year, report_quarter))
         df = ts.get_report_data(report_date.year, report_quarter)
         self._extract_from_dataframe(df)
 
@@ -220,7 +220,7 @@ class DataManager(object):
                 if not col_name in ('name', 'industry', 'area', 'timeToMarket'):
                     continue
                 if not hasattr(stock, col_name):
-                    logging.warning('Stock obj has no attribute %s, skip', col_name)
+                    logging.warning('Stock obj has no attribute %s, skip' % col_name)
                 else:
                     value = row[col_name]
                     value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
@@ -252,25 +252,25 @@ class DataManager(object):
         for stock in self._local_dm.find_stock(show_process=True):
             self._stocks[stock.code] = stock
             count += 1
-        logging.info('loaded %d stocks', count)
+        logging.info('loaded %d stocks' % count)
 
         count = 0
         for index in self._local_dm.find_index():
             self._indexes[index.code] = index
             count += 1
-        logging.info('loaded %d indexes', count)
+        logging.info('loaded %d indexes' % count)
 
         if remove_invalid:
             self._remove_unavailable_stocks()
 
     def _extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
         if df is None or not isinstance(df, DataFrame):
-            logging.error('cannot get data or wrong data -> %s!', df)
+            logging.error('cannot get data or wrong data -> %s!' % df)
             return
         for index, row in df.iterrows():
             code = row['code']
             if not code in self._stocks:
-                logging.warning('stock %s missed?', code)
+                logging.warning('stock %s missed?' % code)
                 continue
             stock = self._stocks[code]
             for col_name in df.columns:
@@ -281,7 +281,7 @@ class DataManager(object):
                     continue
                 real_field = col_name in remap and remap[col_name] or col_name
                 if not hasattr(stock, real_field):
-                    logging.warning('stock obj has no attribute %s, skip', col_name)
+                    logging.warning('stock obj has no attribute %s, skip' % col_name)
                 else:
                     old = stock.__getattribute__(real_field)
                     new = isinstance(row[col_name], str) and util.strQ2B(row[col_name]).replace(' ', '') or row[col_name]
@@ -289,7 +289,7 @@ class DataManager(object):
                     if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
                        new is not None and (isinstance(new, float) and not math.isnan(new)) and \
                        old != new:
-                        logging.debug('field %s changed: old(%s) -> new(%s), %s', col_name, str(old), str(new), stock)
+                        logging.debug('field %s changed: old(%s) -> new(%s), %s' % (col_name, str(old), str(new), stock))
                     stock.__setattr__(real_field, new)
 
     def _remove_unavailable_stocks(self):
@@ -299,7 +299,7 @@ class DataManager(object):
                 stocks_to_remove.append(stock)
         for stock in stocks_to_remove:
             del self._stocks[stock.code]
-            logging.warning('removed unavailable stock %s (maybe not IPO yet)', stock)
+            logging.warning('removed unavailable stock %s (maybe not IPO yet)' % stock)
 
     def _pick_hist_data_and_save(self, max_num_threads):
         threads = []
@@ -314,7 +314,7 @@ class DataManager(object):
             elif stock.last_update <= datetime.datetime(update_to.year, update_to.month, update_to.day):
                 squeue.put(stock)
             else:
-                logging.debug('stock %s already updated at %s', stock, stock.last_update)
+                logging.debug('stock %s already updated at %s' % (stock, stock.last_update))
         total_to_update = squeue.qsize()
 
         def __pick_history():
@@ -323,30 +323,30 @@ class DataManager(object):
                 start_from = today - datetime.timedelta(days=365*self._data_period_y)
 
                 try:
-                    logging.debug('[%d/%d]picking %d year hist data of %s', total_to_update - squeue.qsize(),
-                                total_to_update, self._data_period_y, stock)
+                    logging.debug('[%d/%d] picking %d year hist data of %s' % (total_to_update - squeue.qsize(),
+                                total_to_update, self._data_period_y, stock))
                     hist = ts.get_hist_data(stock.code, start=str(start_from), end=str(update_to), ktype='D', retry_count=5, pause=0)
                     fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
                 except IOError as e:
                     logging.error('exception: %s', str(e))
-                    logging.error('cannot get hist/qfq data of %s', stock)
+                    logging.error('cannot get hist/qfq data of %s' % stock)
                     failed = True
                 else:
                     if hist is None:
-                        logging.warning('%s has no history data', stock)
+                        logging.warning('%s has no history data' % stock)
                     elif fq_factor is None:
-                        logging.warning('%s has no fq data', stock)
+                        logging.warning('%s has no fq data' % stock)
                     else:
                         stock.hist_data = hist.join(fq_factor)
 
                         stock.sanitize()
-                        logging.debug('%s: %d days trading data', stock, stock.hist_data.index.size)
+                        logging.debug('%s: %d days trading data' % (stock, stock.hist_data.index.size))
                         stock.last_update = datetime.datetime.now()
                         self._local_dm.save_stock(stock)
                 squeue.task_done()
 
         num_threads = min(max_num_threads, int(squeue.qsize() / 2))
-        logging.info('getting history data of %d stocks using %d threads', squeue.qsize(), num_threads)
+        logging.info('getting history data of %d stocks using %d threads' % (squeue.qsize(), num_threads))
         for i in range(0, num_threads):
                 thread = Thread(name = "PickingThread%d" % i, target=__pick_history)
                 thread.daemon = True
@@ -367,7 +367,7 @@ class DataManager(object):
         if (failed):
             logging.warning('failed to pick some stocks')
         else:
-            logging.info('done getting history data by %d seconds', t_delta.days*24*3600 + t_delta.seconds)
+            logging.info('done getting history data by %d seconds' % (t_delta.days*24*3600 + t_delta.seconds))
         return not failed
 
     def find_one_stock_from_db(self, code):

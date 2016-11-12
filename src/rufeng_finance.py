@@ -70,7 +70,7 @@ class RufengFinance(object):
             parser.error('invalid command')
             return -1
         if cmd_map[command] is None:
-            logging.error('command \'%s\' is not implemented yet', command)
+            logging.error('command \'%s\' is not implemented yet' % command)
             return -1
 
         if options.config:
@@ -88,7 +88,7 @@ class RufengFinance(object):
 
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db()
-        logging.info('all %d available stocks can be analyzed', len(self._dm.stocks))
+        logging.info('all %d available stocks can be analyzed' % len(self._dm.stocks))
         logging.info('%-6s %-8s %6s %-30s %-18s' % ('code', 'name', 'price', 'hist_data', 'update'))
         for code, stock in self._dm.stocks.items():
             logging.info('%-6s %-4s %5.2f %-30s %-18s' % (
@@ -114,23 +114,23 @@ class RufengFinance(object):
             StockPlot().plot_hist(stock)
 
     def cmd_analyze(self, options, cmd_args):
+        config = self._config['analyzer']
+        logging.info('analyzer config:\n%s' % yaml.dump(config))
         self._dm.load_from_db()
 
-        analyzer = Analyzer()
-        analyzer.stocks = self._dm.stocks
-        analyzer.indexs = self._dm.indexes
-        logging.info('all %d available stocks will be analyzed', len(analyzer.stocks))
+        analyzer = Analyzer(self._dm.stocks, self._dm.indexes, config)
+        logging.info('all %d available stocks will be analyzed' % len(analyzer.stocks))
         logging.info('-----------invoking data analyzer module-------------')
         selected_stocks, global_status = analyzer.analyze()
         logging.info('-------------------analyze done----------------------')
-        logging.info('list of good %d stocks:', len(selected_stocks))
+        logging.info('list of good %d stocks:' % len(selected_stocks))
         for stock in selected_stocks:
             logging.info('%s', stock)
         logging.info('global market status: %s', 'Good!' if global_status else 'Bad!')
 
     def cmd_monitor(self, options, cmd_args):
         config = self._config['monitor']
-        logging.info('monitor config:\n%s', yaml.dump(config))
+        logging.info('monitor config:\n%s' % yaml.dump(config))
         StockMonitor(config).start_and_join()
 
 if __name__ == '__main__':
