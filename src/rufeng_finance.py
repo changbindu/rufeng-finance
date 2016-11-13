@@ -9,6 +9,7 @@ sys.path.insert(0, 'tushare')
 import os
 import logging.config, coloredlogs
 from optparse import OptionParser
+from tqdm import tqdm
 import yaml
 
 from analyzer import Analyzer
@@ -138,13 +139,19 @@ class RufengFinance(object):
         logging.info('-------------------analyze done----------------------')
         logging.info('list of good %d stocks%s:' % (len(selected_stocks),
                      options.output and ' and save plots to %s' % options.output or ''))
+
         for stock in selected_stocks:
             logging.info('%s', stock)
-            if options.output:
-                if not os.path.exists(options.output):
-                    os.makedirs(options.output)
-                StockPlot().plot_hist(stock, os.path.join(options.output, '%s.png' % stock.code))
         logging.info('global market status: %s', 'Good!' if global_status else 'Bad!')
+
+        if options.output:
+            if not os.path.exists(options.output):
+                os.makedirs(options.output)
+            plot = StockPlot()
+            pbar = tqdm(selected_stocks)
+            for stock in pbar:
+                pbar.set_description("Ploting %s[%s]" % (stock.code, stock.name))
+                plot.plot_hist(stock, os.path.join(options.output, '%s[%s].png' % (stock.code, stock.name)))
 
 
     def cmd_monitor(self, options, cmd_args):

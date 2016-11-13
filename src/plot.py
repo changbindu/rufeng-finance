@@ -84,6 +84,7 @@ class StockPlot(object):
             ax1.plot(data.v_ma10.values, color='y', lw=1)
             ax1.plot(data.v_ma20.values, color='r', lw=1)
         plt.setp(ax1.get_xticklabels(), visible=False)
+        ax1.yaxis.set_ticks_position('both')
         ax1.set_ylabel('Volume')
         ax1.grid(True)
 
@@ -91,11 +92,13 @@ class StockPlot(object):
         ax2 = plt.subplot(gs[2], sharex=ax0)
         volume_overlay(ax2, data.open, data.close, data.turnover,
                        width=.75, colorup='g', colordown='r', alpha=0.75)
+        ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%s' % (data.index[x])))
         ax2.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%.2f%%' % (x)))
         for label in ax2.xaxis.get_ticklabels():
             label.set_rotation(0)
-        ax2.set_ylabel('Turnover')
         ax2.set_xlabel('Date')
+        ax2.yaxis.set_ticks_position('both')
+        ax2.set_ylabel('Turnover')
         ax2.grid(True)
 
         # plt.legend(prop=fp)
