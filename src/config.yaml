@@ -1,14 +1,21 @@
 core:
   data_period:    3 # years
   max_threads:    20
+
 analyzer:
   min_hist_data:  60 # days
   max_price:      20
   max_nmc:        100 # yi
+  max_mktcap:     400 # yi
   max_pe:         400
   exclude_gem:    false
+  exclude_suspension: true
+  exclude_st:     true
   min_d5_turnover_avg: 3.0
-  max_position:   0.6
+  position:
+    -             0.6
+    -             1.0
+
 monitor:
   '002341':
     high:         20.0

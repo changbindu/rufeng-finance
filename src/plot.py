@@ -38,7 +38,7 @@ class StockPlot(object):
 
         for i, factor in enumerate(data.factor):
             if i != 0 and factor != data.factor[i-1]:
-                plt.annotate(r'Q(f=%.2f)' % factor,
+                plt.annotate(r'Q(f=%.3f)' % factor,
                      xy=(i, data.open[i]), xycoords='data',
                      xytext=(0, data.open[i]), textcoords='offset pixels', fontsize=10,                     arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
 

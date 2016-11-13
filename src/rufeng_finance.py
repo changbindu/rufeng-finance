@@ -132,6 +132,10 @@ class RufengFinance(object):
         logging.info('analyzer config:\n%s' % yaml.dump(config))
         self._dm.load_from_db()
 
+        if not len(self._dm.stocks):
+            logging.error('no stocks found in local database, please run \'download\' command first')
+            return
+
         analyzer = Analyzer(self._dm.stocks, self._dm.indexes, config)
         logging.info('all %d available stocks will be analyzed' % len(analyzer.stocks))
         logging.info('-----------invoking data analyzer module-------------')
@@ -152,7 +156,6 @@ class RufengFinance(object):
             for stock in pbar:
                 pbar.set_description("Ploting %s[%s]" % (stock.code, stock.name))
                 plot.plot_hist(stock, os.path.join(options.output, '%s[%s].png' % (stock.code, stock.name)))
-
 
     def cmd_monitor(self, options, cmd_args):
         config = self._config['monitor']
