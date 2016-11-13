@@ -22,18 +22,25 @@ class StockPlot(object):
         self.display_size = (5, 5)
         self.save_size = (40, 20)
 
-    def _plot(self, stock, figsize, qfq=False):
+    def __plot(self, stock, figsize, qfq):
         data = stock.qfq_data if qfq else stock.hist_data
         data = data.sort_index(ascending=True, inplace=False)
 
         fp = FontProperties(fname='simsun.ttc')
         fig = plt.figure(figsize=figsize, dpi=100)
         fig.subplots_adjust(left=.10, bottom=.09, right=.93, top=.95, wspace=.20, hspace=0)
-
         gs = gridspec.GridSpec(3, 1, height_ratios=[4, 1, 1])
+
+        # draw hist price diagram
         ax0 = plt.subplot(gs[0])
         candlestick2_ochl(ax0, data.open, data.high, data.low, data.close,
                           width=.75, colorup='g', colordown='r', alpha=0.75)
+
+        for i, factor in enumerate(data.factor):
+            if i != 0 and factor != data.factor[i-1]:
+                plt.annotate(r'Q(f=%.2f)' % factor,
+                     xy=(i, data.open[i]), xycoords='data',
+                     xytext=(0, data.open[i]), textcoords='offset pixels', fontsize=10,                     arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
 
         left, height, top = 0.025, 0.05, 0.9
         t1 = ax0.text(left, top, '%s-%s' % (stock.code, stock.name), fontproperties=fp, fontsize=8, transform=ax0.transAxes)
@@ -55,14 +62,22 @@ class StockPlot(object):
         plt.ylabel('Price')
         plt.ylim(ymin=stock.hist_min-stock.hist_min/30, ymax=stock.hist_max+stock.hist_max/30)
         ax0.grid(True)
+
+        if qfq:
+            plt.title('Forward Adjusted History Price')
+        else:
+            plt.title('History Price')
+
         xrange = range(0, data.index.size, max(int(data.index.size / 5), 5))
         plt.xticks(xrange, [data.index[loc] for loc in xrange])
         plt.setp(ax0.get_xticklabels(), visible=False)
 
+        # draw hist volume diagram
         ax1 = plt.subplot(gs[1], sharex=ax0)
         volume_overlay(ax1, data.open, data.close, data.volume,
                        width=.75, colorup='g', colordown='r', alpha=0.75)
-        ax1.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%1.1fM' % (x*1e-6)))
+        ax1.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%1.1fM' % (x*1e-6)
+                       if data.volume.max()>1e6 else '%1.1fK' % (x*1e-3)))
 
         if not qfq:
             ax1.plot(data.v_ma5.values, color='b', lw=1)
@@ -70,7 +85,9 @@ class StockPlot(object):
             ax1.plot(data.v_ma20.values, color='r', lw=1)
         plt.setp(ax1.get_xticklabels(), visible=False)
         ax1.set_ylabel('Volume')
+        ax1.grid(True)
 
+        # draw hist turnover diagram
         ax2 = plt.subplot(gs[2], sharex=ax0)
         volume_overlay(ax2, data.open, data.close, data.turnover,
                        width=.75, colorup='g', colordown='r', alpha=0.75)
@@ -78,29 +95,22 @@ class StockPlot(object):
         for label in ax2.xaxis.get_ticklabels():
             label.set_rotation(0)
         ax2.set_ylabel('Turnover')
-
         ax2.set_xlabel('Date')
+        ax2.grid(True)
 
-        if qfq:
-            plt.title('Forward Adjusted History Price')
-        else:
-            plt.title('History Price')
         # plt.legend(prop=fp)
 
-    def plot_hist(self, stock, path=None):
+    def _plot(self, stock, qfq, path=None):
         if path is None:
-            self._plot(stock, self.display_size)
+            self.__plot(stock, self.display_size, qfq)
             plt.show()
         else:
-            self._plot(stock, self.save_size)
+            self.__plot(stock, self.save_size, qfq)
             plt.savefig(path)
         plt.close()
 
+    def plot_hist(self, stock, path=None):
+        self._plot(stock, False, path)
+
     def plot_qfq(self, stock, path=None):
-        if path is None:
-            self._plot(stock, self.display_size, qfq=True)
-            plt.show()
-        else:
-            self._plot(stock, self.save_size, qfq=True)
-            plt.savefig(path)
-        plt.close()
+        self._plot(stock, True, path)
