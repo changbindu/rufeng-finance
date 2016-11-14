@@ -372,3 +372,7 @@ class DataManager(object):
 
     def find_one_stock_from_db(self, code):
         return self._local_dm.find_one_stock(code)
+
+    def drop_local_db(self):
+        self._local_dm.drop_stock()
+        self._local_dm.drop_index()

@@ -26,6 +26,7 @@ class RufengFinance(object):
         usage = "usage: %prog [options] <cmd> arg1 arg2\n" + \
                 "\n<cmd> should be one of download/list/plot/select:" + \
                 "\n  download - download stock data from internet (1 year)" + \
+                "\n  drop     - drop all data in local database" + \
                 "\n  list     - list all stocks in local database" + \
                 "\n  plot     - plot stock diagram" + \
                 "\n  analyze  - analyze our stocks" + \
@@ -66,6 +67,7 @@ class RufengFinance(object):
         cmd_args = args[1:] if len(args) > 1 else ()
         cmd_map = {
             'download': self.cmd_download,
+            'drop':     self.cmd_drop,
             'list':     self.cmd_list,
             'plot':     self.cmd_plot,
             'analyze':  self.cmd_analyze,
@@ -126,6 +128,10 @@ class RufengFinance(object):
                 StockPlot().plot_qfq(stock, path)
             else:
                 StockPlot().plot_hist(stock, path)
+
+    def cmd_drop(self, options, cmd_args):
+        logging.info('all local data will be dropped')
+        self._dm.drop_local_db()
 
     def cmd_analyze(self, options, cmd_args):
         config = self._config['analyzer']
