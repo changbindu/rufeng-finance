@@ -38,33 +38,28 @@ class RufengFinance(object):
         parser.add_option("--config",
                           metavar="FILE", dest="config", default="config.yaml",
                           help="specific config file"),
-
         parser.add_option("-o", "--output",
                           metavar="FILE", dest="output",
                           help="specific output dir or file"),
-
-        parser.add_option("-s", "--selector",
-                      default="all", dest="selector",
-                      help="selectors: all, trend, macd, or hot [default: %default]")
+        parser.add_option("-t", "--threads",
+                          type="int", dest="threads", default=multiprocessing.cpu_count(),
+                          help="threads number to work [default %d]" % multiprocessing.cpu_count())
 
         # for download options
         group = OptionGroup(parser, 'Download Options', description='')
-        group.add_option("-t", "--threads",
-                          type="int", dest="threads", default=multiprocessing.cpu_count(),
-                          help="threads number to work [default %d]" % multiprocessing.cpu_count())
         group.add_option("-f", "--force_update",
-                          action="store_true", dest="force_update", default=False,
-                          help="download data ignore local existing data")
+                         action="store_true", dest="force_update", default=False,
+                         help="download data ignore local existing data")
         parser.add_option_group(group)
 
         # for plot options
         group = OptionGroup(parser, 'Plot Options', description='')
         group.add_option("--qfq",
-                          action="store_true", dest="qfq", default=False,
-                          help="show forward adjusted history price")
+                         action="store_true", dest="qfq", default=False,
+                         help="show forward adjusted history price")
         group.add_option("-i", "--index-overlay",
-                          action="store_true", dest="index_overlay", default=False,
-                          help="overlay index history on price")
+                         action="store_true", dest="index_overlay", default=False,
+                         help="overlay index history on price")
         parser.add_option_group(group)
 
         (options, args) = parser.parse_args()
@@ -157,7 +152,7 @@ class RufengFinance(object):
         analyzer = Analyzer(self._dm.stocks, self._dm.indexes, config)
         logging.info('all %d available stocks will be analyzed' % len(analyzer.stocks))
         logging.info('-----------invoking data analyzer module-------------')
-        selected_stocks, global_status = analyzer.analyze()
+        selected_stocks, global_status = analyzer.analyze(threads=options.threads)
         logging.info('-------------------analyze done----------------------')
         logging.info('list of good %d stocks%s:' % (len(selected_stocks),
                      options.output and ' and save plots to %s' % options.output or ''))
