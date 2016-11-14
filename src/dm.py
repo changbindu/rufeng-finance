@@ -85,11 +85,21 @@ class LocalDataManager(object):
                 tmp[k] = v
         return tmp
 
+    def find_one_index(self, code):
+        dindex = self.indexes_collection.find_one({'code': code})
+        if dindex is None:
+            return None
+        index = self.__from_dict(dindex)
+        index.sanitize()
+        return index
+
     def find_index(self, filter=None):
         ilist = []
         cursor = self.indexes_collection.find(filter)
         for dindex in cursor:
-            ilist.append(self.__from_dict(dindex))
+            index = self.__from_dict(dindex)
+            index.sanitize()
+            ilist.append(index)
         return ilist
 
     def save_index(self, index):
@@ -242,7 +252,9 @@ class DataManager(object):
             logging.info('get all hist data of index %s' % str(index))
             df = ts.get_hist_data(index_map[code])
             logging.info('got %d days trading data' % df.index.size)
+            df.index = df.index.map(str)
             index.hist_data = df
+            index.last_update = datetime.datetime.now()
             self._local_dm.save_index(index)
 
     def load_from_db(self, remove_invalid=True):
@@ -372,6 +384,9 @@ class DataManager(object):
 
     def find_one_stock_from_db(self, code):
         return self._local_dm.find_one_stock(code)
+
+    def find_one_index_from_db(self, code):
+        return self._local_dm.find_one_index(code)
 
     def drop_local_db(self):
         self._local_dm.drop_stock()

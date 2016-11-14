@@ -57,6 +57,9 @@ class RufengFinance(object):
         parser.add_option("--qfq",
                           action="store_true", dest="qfq", default=False,
                           help="plot: show forward adjusted history price")
+        parser.add_option("-i", "--index-overlay",
+                          action="store_true", dest="index_overlay", default=False,
+                          help="plot: overlay index history on price")
 
         (options, args) = parser.parse_args()
         if len(args) < 1:
@@ -109,6 +112,9 @@ class RufengFinance(object):
             logging.error("missing argument stock code")
             return -1
 
+        if options.index_overlay:
+            index = self._dm.find_one_index_from_db('000001')
+
         for code in cmd_args:
             stock = self._dm.find_one_stock_from_db(code)
             if stock is None:
@@ -125,9 +131,9 @@ class RufengFinance(object):
             else:
                 print('show diagram for stock %s ...' % stock)
             if options.qfq:
-                StockPlot().plot_qfq(stock, path)
+                StockPlot().plot_qfq(stock, index if options.index_overlay else None, path)
             else:
-                StockPlot().plot_hist(stock, path)
+                StockPlot().plot_hist(stock, index if options.index_overlay else None, path)
 
     def cmd_drop(self, options, cmd_args):
         logging.info('all local data will be dropped')
