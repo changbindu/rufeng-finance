@@ -37,7 +37,6 @@ class Analyzer(object):
     def _analyze_single_stock(self, stock):
         """return if this stock is good"""
         hist_data = stock.hist_data
-        qfq_data = stock.qfq_data
 
         # 创业板
         if self.config_exclude_gem and stock.code.startswith('300'):
@@ -83,6 +82,9 @@ class Analyzer(object):
         if d5_avg < self.config_min_d5_turnover_avg:
             logging.debug('%s: 5 days average turnover too low, %.2f%%' % (stock, d5_avg))
             return False
+
+        # delay this until we really need
+        qfq_data = stock.qfq_data
 
         # 当前走势位置
         if stock.hist_len > 60:

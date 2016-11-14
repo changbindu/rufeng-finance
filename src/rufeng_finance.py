@@ -1,5 +1,6 @@
 # coding=utf-8
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
+__version__ = '1.1.0'
 
 import sys
 if sys.version_info < (3, 0):
@@ -8,7 +9,8 @@ sys.path.insert(0, 'tushare')
 
 import os
 import logging.config, coloredlogs
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
+import multiprocessing
 from tqdm import tqdm
 import yaml
 
@@ -46,20 +48,24 @@ class RufengFinance(object):
                       help="selectors: all, trend, macd, or hot [default: %default]")
 
         # for download options
-        parser.add_option("-t", "--threads",
-                          type="int", dest="threads", default=20,
-                          help="download: threads number to work")
-        parser.add_option("-a", "--force_update",
+        group = OptionGroup(parser, 'Download Options', description='')
+        group.add_option("-t", "--threads",
+                          type="int", dest="threads", default=multiprocessing.cpu_count(),
+                          help="threads number to work [default %d]" % multiprocessing.cpu_count())
+        group.add_option("-f", "--force_update",
                           action="store_true", dest="force_update", default=False,
-                          help="download: download data ignore local existing data")
+                          help="download data ignore local existing data")
+        parser.add_option_group(group)
 
         # for plot options
-        parser.add_option("--qfq",
+        group = OptionGroup(parser, 'Plot Options', description='')
+        group.add_option("--qfq",
                           action="store_true", dest="qfq", default=False,
-                          help="plot: show forward adjusted history price")
-        parser.add_option("-i", "--index-overlay",
+                          help="show forward adjusted history price")
+        group.add_option("-i", "--index-overlay",
                           action="store_true", dest="index_overlay", default=False,
-                          help="plot: overlay index history on price")
+                          help="overlay index history on price")
+        parser.add_option_group(group)
 
         (options, args) = parser.parse_args()
         if len(args) < 1:

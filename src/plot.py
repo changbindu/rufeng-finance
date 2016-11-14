@@ -116,6 +116,10 @@ class StockPlot(object):
 
         # plt.legend(prop=fp)
 
+        self._ax_price = ax_price
+        self._ax_volume = ax_volume
+        self._ax_turnover = ax_turnover
+
     def _plot(self, stock, qfq, index=None, path=None):
         if path is None:
             self.__plot(stock, self.display_size, qfq, index)
@@ -130,3 +134,15 @@ class StockPlot(object):
 
     def plot_qfq(self, stock, index=None, path=None):
         self._plot(stock, True, index, path)
+
+    @property
+    def ax_price(self):
+        return self._ax_price
+
+    @property
+    def ax_volume(self):
+        return self._ax_volume
+
+    @property
+    def ax_turnover(self):
+        return self._ax_turnover

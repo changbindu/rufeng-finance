@@ -61,8 +61,7 @@ class StockBase(object):
         return self.hist_data.index[loc]
 
     def get_turnover_avg(self, days):
-        days = max(days, 1)
-        return sum(self.hist_data.turnover[0:days])/5
+        return self.hist_data.turnover[0:days].mean()
 
 
 class Stock(StockBase):
@@ -128,6 +127,7 @@ class Stock(StockBase):
 
     @property
     def qfq_data(self):
+        """warning: calculate qfq data is expensive"""
         df = DataFrame()
         max_factor = self.hist_data.tail(1).factor[0]
         for i in range(self.hist_data.index.size):
