@@ -9,3 +9,4 @@ simplejson>=3.8.2
 six>=1.10.0
 pyyaml
 tqdm
+threadpool
