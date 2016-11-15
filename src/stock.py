@@ -138,6 +138,9 @@ class Stock(StockBase):
         df.sort_index(ascending=False, inplace=True)
         return df
 
+    def get_hist_value(self, column, date):
+        return self.hist_data[column][date]
+
 
 class Index(StockBase):
     def __init__(self):

@@ -113,8 +113,7 @@ class RufengFinance(object):
             logging.error("missing argument stock code")
             return -1
 
-        if options.index_overlay:
-            index = self._dm.find_one_index_from_db('000001')
+        index = self._dm.find_one_index_from_db('000001')
 
         for code in cmd_args:
             stock = self._dm.find_one_stock_from_db(code)
@@ -132,9 +131,9 @@ class RufengFinance(object):
             else:
                 print('show diagram for stock %s ...' % stock)
             if options.qfq:
-                StockPlot().plot_qfq(stock, index if options.index_overlay else None, path)
+                StockPlot().plot_qfq(stock, index, options.index_overlay, path)
             else:
-                StockPlot().plot_hist(stock, index if options.index_overlay else None, path)
+                StockPlot().plot_hist(stock, index, options.index_overlay, path)
 
     def cmd_drop(self, options, cmd_args):
         logging.info('all local data will be dropped')
