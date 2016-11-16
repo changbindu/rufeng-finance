@@ -126,14 +126,8 @@ class Stock(StockBase):
 
         self.price = float('NaN')
 
-    def sanitize(self, index_for_ref=None):
+    def sanitize(self):
         super(Stock, self).sanitize()
-        if index_for_ref:
-            # remove shouldn't exist data by ref to sz index trading calendar
-            for date in self.hist_data.index:
-                if date not in index_for_ref.hist_data.index:
-                    logging.warning('%s: drop shouldn\'t exist data at %s' % (self, date))
-                    self.hist_data.drop(date, inplace=True)
 
     @property
     def qfq_data(self):

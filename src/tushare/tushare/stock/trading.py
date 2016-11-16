@@ -91,6 +91,11 @@ def get_hist_data(code=None, start=None, end=None,
                 df = df.drop('turnover', axis=1)
             df = df.set_index('date')
             df = df.sort_index(ascending = False)
+
+            # WA: sina sometimes return wrong data at 2015-02-24 and 2015-10-07, which are not trading days.
+            for date in ('2015-02-24', '2015-10-07'):
+                if date in df.index:
+                    df.drop(date, inplace=True)
             return df
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 

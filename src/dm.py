@@ -359,7 +359,7 @@ class DataManager(object):
                     else:
                         stock.hist_data = hist.join(fq_factor)
 
-                        stock.sanitize(self._indexes['000001'])
+                        stock.sanitize()
                         logging.debug('%s: %d days trading data' % (stock, stock.hist_data.index.size))
                         stock.last_update = datetime.datetime.now()
                         self._local_dm.save_stock(stock)
