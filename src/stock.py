@@ -162,6 +162,10 @@ class Stock(StockBase):
         if df_nan.index.size > 0:
             logging.warning('found nan in hist_data\n%s' % df_nan)
             return False
+
+        if self.hist_data.index.has_duplicates:
+            logging.warning('found duplicates\n%s' % self.hist_data.index.get_duplicates())
+            return False
         return True
 
 
