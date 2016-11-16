@@ -68,12 +68,17 @@ class StockPlot(object):
                                   arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"),
                                   fontsize=10, color='y')
 
-        left, height, top = 0.025, 0.05, 0.9
-        t1 = ax_price.text(left, top, '%s-%s' % (stock.code, stock.name), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
+        left, height, top = 0.025, 0.03, 0.9
+        t1 = ax_price.text(left, top, '%s-%s,%s,%s' % (stock.code, stock.name, stock.area, stock.industry),
+                           fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(left, top - height, 'pe=%.2f' % (stock.pe), fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(left, top - 2*height, 'nmc=%.2f亿' % (stock.nmc/10000), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(left, top - 3*height, 'mktcap=%.2f亿' % (stock.mktcap/10000), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
+
         if not qfq:
-            t2 = ax_price.text(left, top - height, 'EMA(5)', color='b', fontsize=8, transform=ax_price.transAxes)
-            t3 = ax_price.text(left, top - 2 * height, 'EMA(10)', color='y', fontsize=8, transform=ax_price.transAxes)
-            t4 = ax_price.text(left, top - 3 * height, 'EMA(20)', color='r', fontsize=8, transform=ax_price.transAxes)
+            t2 = ax_price.text(left, top - 4*height, 'EMA(5)', color='b', fontsize=8, transform=ax_price.transAxes)
+            t3 = ax_price.text(left, top - 5*height, 'EMA(10)', color='y', fontsize=8, transform=ax_price.transAxes)
+            t4 = ax_price.text(left, top - 6*height, 'EMA(20)', color='r', fontsize=8, transform=ax_price.transAxes)
             ax_price.plot(stock_data.ma5.values, color='b', lw=1)
             ax_price.plot(stock_data.ma10.values, color='y', lw=1)
             ax_price.plot(stock_data.ma20.values, color='r', lw=1)

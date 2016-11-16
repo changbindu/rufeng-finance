@@ -44,6 +44,7 @@ class StockBase(object):
 
     def sanitize(self):
         if self.hist_data is not None:
+            # self.hist_data.index = self.hist_data.index.map(np.datetime64)
             self.hist_data.sort_index(ascending=False, inplace=True)
 
     def check(self):
@@ -60,6 +61,14 @@ class StockBase(object):
     @property
     def hist_min(self):
         return self.hist_data.low.min()
+
+    @property
+    def hist_start_date(self):
+        return self.hist_data.index[-1]
+
+    @property
+    def hist_last_date(self):
+        return self.hist_data.index[0]
 
     def get_hist_date(self, loc):
         return self.hist_data.index[loc]
@@ -133,11 +142,11 @@ class Stock(StockBase):
     def qfq_data(self):
         """warning: calculate qfq data is expensive"""
         df = DataFrame()
-        max_factor = self.hist_data.tail(1).factor[0]
+        max_factor = self.hist_data.factor[0]
         for i in range(self.hist_data.index.size):
             factor = self.hist_data.factor[i]
             line = self.hist_data[i:i+1][['open', 'close', 'low', 'high']]
-            df = df.append(line/(max_factor/factor))
+            df = df.append(line/(factor/max_factor))
         df = df.join(self.hist_data[['volume', 'turnover', 'factor']])
         df.sort_index(ascending=False, inplace=True)
         return df

@@ -7,6 +7,7 @@ import datetime, time
 from queue import Queue
 from threading import Thread
 from pymongo import MongoClient
+import numpy as np
 from pandas import DataFrame
 import tushare as ts
 import logging
@@ -334,17 +335,21 @@ class DataManager(object):
             elif stock.last_update <= datetime.datetime(update_to.year, update_to.month, update_to.day):
                 squeue.put(stock)
             else:
-                logging.debug('stock %s already updated at %s' % (stock, stock.last_update))
+                logging.debug('stock %s already updated at %s' % (stock, stock.last_update.strftime("%Y-%m-%d %H:%M:%S")))
         total_to_update = squeue.qsize()
 
         def __pick_history():
             while not squeue.empty():
                 stock = squeue.get()
                 start_from = today - datetime.timedelta(days=365*self._data_period_y)
+                append = np.datetime64(stock.hist_start_date, 'D') <= start_from if stock.hist_data is not None else False
+                if append:
+                    start_from = np.datetime64(stock.hist_last_date, 'D') if append else start_from
 
                 try:
-                    logging.debug('[%d/%d] picking %d year hist data of %s' % (total_to_update - squeue.qsize(),
-                                total_to_update, self._data_period_y, stock))
+                    logging.debug('[%d/%d] picking hist data (%s-%s) of %s' % (
+                                total_to_update - squeue.qsize(), total_to_update,
+                                start_from, update_to, stock))
                     hist = ts.get_hist_data(stock.code, start=str(start_from), end=str(update_to), ktype='D', retry_count=5, pause=0)
                     fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
                 except IOError as e:
@@ -353,14 +358,21 @@ class DataManager(object):
                     failed = True
                 else:
                     if hist is None:
-                        logging.warning('%s has no history data' % stock)
+                            logging.warning('%s has no history data%s' % (
+                                    stock, append and ' to append' or ''))
                     elif fq_factor is None:
-                        logging.warning('%s has no fq data' % stock)
+                        logging.warning('%s has no fq data%s' % (
+                                stock, append and ' to append' or ''))
                     else:
-                        stock.hist_data = hist.join(fq_factor)
+                        if append:
+                            stock.hist_data = stock.hist_data.append(hist.join(fq_factor))
+                        else:
+                            stock.hist_data = hist.join(fq_factor)
 
                         stock.sanitize()
-                        logging.debug('%s: %d days trading data' % (stock, stock.hist_data.index.size))
+                        logging.debug('%s: %d days trading data%s' % (
+                                stock, stock.hist_data.index.size,
+                                append and ', appended %d days'%hist.index.size or ''))
                         stock.last_update = datetime.datetime.now()
                         self._local_dm.save_stock(stock)
                 squeue.task_done()

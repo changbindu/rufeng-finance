@@ -191,7 +191,8 @@ class RufengFinance(object):
                      options.output and ' and save plots to %s' % options.output or ''))
 
         for stock in selected_stocks:
-            logging.info('%s', stock)
+            logging.info('%s: price %.2f pe %.2f nmc %.2f mktcap %.2f area %s industry %s',
+                         stock, stock.price, stock.pe, stock.nmc/10000, stock.mktcap/10000, stock.area, stock.industry)
         logging.info('global market status: %s', 'Good!' if global_status else 'Bad!')
 
         if options.output:
