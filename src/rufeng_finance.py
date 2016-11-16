@@ -18,6 +18,8 @@ from analyzer import Analyzer
 from dm import DataManager
 from monitor import StockMonitor
 from plot import StockPlot
+import util
+
 
 class RufengFinance(object):
     def __init__(self):
@@ -27,12 +29,13 @@ class RufengFinance(object):
     def main(self, argc, argv):
         usage = "usage: %prog [options] <cmd> arg1 arg2\n" + \
                 "\n<cmd> should be one of download/list/plot/select:" + \
-                "\n  download - download stock data from internet (1 year)" + \
-                "\n  drop     - drop all data in local database" + \
+                "\n  download - download stock data from internet (years)" + \
+                "\n  check    - check data in local database" + \
+                "\n  drop     - drop data in local database" + \
                 "\n  list     - list all stocks in local database" + \
                 "\n  plot     - plot stock diagram" + \
-                "\n  analyze  - analyze our stocks" + \
-                "\n  monitor  - monitor realtime status"
+                "\n  analyze  - analyze our stocks using local data" + \
+                "\n  monitor  - monitor realtime market status"
         parser = OptionParser(usage=usage)
 
         parser.add_option("--config",
@@ -43,7 +46,7 @@ class RufengFinance(object):
                           help="specific output dir or file"),
         parser.add_option("-t", "--threads",
                           type="int", dest="threads", default=multiprocessing.cpu_count(),
-                          help="threads number to work [default %d]" % multiprocessing.cpu_count())
+                          help="threads number to work [default equal cpu count]")
 
         # for download options
         group = OptionGroup(parser, 'Download Options', description='')
@@ -71,6 +74,7 @@ class RufengFinance(object):
         cmd_args = args[1:] if len(args) > 1 else ()
         cmd_map = {
             'download': self.cmd_download,
+            'check':    self.cmd_check,
             'drop':     self.cmd_drop,
             'list':     self.cmd_list,
             'plot':     self.cmd_plot,
@@ -135,9 +139,39 @@ class RufengFinance(object):
             else:
                 StockPlot().plot_hist(stock, index, options.index_overlay, path)
 
+    def cmd_check(self, options, cmd_args):
+        if len(cmd_args) < 1:
+            self._dm.load_from_db()
+            stocks = self._dm.stocks
+        else:
+            stocks = {}
+            for code in cmd_args:
+                stock = self._dm.find_one_stock_from_db(code)
+                if stock is None:
+                    logging.error('unknown stock %s', code)
+                    continue
+                stocks[stock.code] = stock
+
+        good = bad = 0
+        for code, stock in stocks.items():
+            logging.info('checking %s' % stock)
+            if stock.check():
+                logging.info('Good, no error found')
+                good += 1
+            else:
+                logging.warning('Bad, error found')
+                bad += 1
+        logging.info('checked %d, good %d, bad %d' % (good+bad, good, bad))
+
     def cmd_drop(self, options, cmd_args):
-        logging.info('all local data will be dropped')
-        self._dm.drop_local_db()
+        if len(cmd_args) < 1:
+            if util.confirm('drop all data?'):
+                logging.info('all local data will be dropped')
+                self._dm.drop_local_data(None)
+        else:
+            for code in cmd_args:
+                logging.info('drop stock/index %s' % code)
+                self._dm.drop_local_data(code)
 
     def cmd_analyze(self, options, cmd_args):
         config = self._config['analyzer']

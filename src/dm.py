@@ -59,8 +59,12 @@ class LocalDataManager(object):
             result = self.stock_collection.update_one({'code': stock.code}, {'$set': update})
             return result
 
-    def drop_stock(self):
-        self.stock_collection.drop()
+    def drop_stock(self, code):
+        if code:
+            result = self.stock_collection.delete_one({'code': code})
+            return result.deleted_count
+        else:
+            self.stock_collection.drop()
 
     @staticmethod
     def __from_dict(data):
@@ -107,8 +111,12 @@ class LocalDataManager(object):
         result = self.indexes_collection.replace_one({'code': index.code}, idict, True)
         return result
 
-    def drop_index(self):
-        self.indexes_collection.drop()
+    def drop_index(self, code):
+        if code:
+            result = self.indexes_collection.delete_one({'code': code})
+            return result.deleted_count
+        else:
+            self.indexes_collection.drop()
 
 
 class DataManager(object):
@@ -388,6 +396,6 @@ class DataManager(object):
     def find_one_index_from_db(self, code):
         return self._local_dm.find_one_index(code)
 
-    def drop_local_db(self):
-        self._local_dm.drop_stock()
-        self._local_dm.drop_index()
+    def drop_local_data(self, code):
+        self._local_dm.drop_stock(code)
+        self._local_dm.drop_index(code)

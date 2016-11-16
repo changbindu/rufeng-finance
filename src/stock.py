@@ -3,6 +3,7 @@ __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import json
 import datetime
+import logging
 from collections import MutableMapping
 from pandas import DataFrame
 
@@ -44,6 +45,9 @@ class StockBase(object):
     def sanitize(self):
         if self.hist_data is not None:
             self.hist_data.sort_index(ascending=False, inplace=True)
+
+    def check(self):
+        pass
 
     @property
     def hist_len(self):
@@ -140,6 +144,16 @@ class Stock(StockBase):
 
     def get_hist_value(self, column, date):
         return self.hist_data[column][date]
+
+    def check(self):
+        if self.hist_data.size == 0:
+            logging.warning('no data in hist_data')
+            return False
+        df_nan = self.hist_data[self.hist_data.isnull().any(axis=1)]
+        if df_nan.index.size > 0:
+            logging.warning('found nan in hist_data\n%s' % df_nan)
+            return False
+        return True
 
 
 class Index(StockBase):
