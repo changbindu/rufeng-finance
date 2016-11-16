@@ -63,7 +63,8 @@ class StockPlot(object):
                 suspended_days = index_data.index.get_loc(next_date) - index_loc
                 ax_price.annotate('suspend %ddays [%s - %s]' % (suspended_days, date, stock_data.index[i+1]),
                                   xy=(i, stock_data.open[i]), xycoords='data',
-                                  xytext=(0, stock_data.high.max()/10), textcoords='offset points',
+                                  xytext=(0, stock_data.high.max()/10), textcoords='offset points', ha='center', va='bottom',
+                                  bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                                   arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"),
                                   fontsize=10, color='y')
 
