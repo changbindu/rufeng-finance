@@ -15,6 +15,12 @@ def strQ2B(ustring):
     return rstring
 
 
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
 def confirm(prompt=None, resp=False):
     """
     From: http://code.activestate.com/recipes/541096-prompt-the-user-for-confirmation/
