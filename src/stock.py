@@ -141,14 +141,14 @@ class Stock(StockBase):
     @property
     def qfq_data(self):
         """warning: calculate qfq data is expensive"""
-        df = DataFrame()
         max_factor = self.hist_data.factor[0]
-        for i in range(self.hist_data.index.size):
-            factor = self.hist_data.factor[i]
-            line = self.hist_data[i:i+1][['open', 'close', 'low', 'high']]
-            df = df.append(line/(max_factor/factor))
+
+        df = self.hist_data[['open', 'close', 'low', 'high']]
+        df = df.div(max_factor/self.hist_data.factor, axis='index')
         df = df.join(self.hist_data[['volume', 'turnover', 'factor']])
         df.sort_index(ascending=False, inplace=True)
+
+        assert df.index.size == self.hist_data.index.size
         return df
 
     def get_hist_value(self, column, date):
