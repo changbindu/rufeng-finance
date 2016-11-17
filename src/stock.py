@@ -146,7 +146,7 @@ class Stock(StockBase):
         for i in range(self.hist_data.index.size):
             factor = self.hist_data.factor[i]
             line = self.hist_data[i:i+1][['open', 'close', 'low', 'high']]
-            df = df.append(line/(factor/max_factor))
+            df = df.append(line/(max_factor/factor))
         df = df.join(self.hist_data[['volume', 'turnover', 'factor']])
         df.sort_index(ascending=False, inplace=True)
         return df
