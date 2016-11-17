@@ -71,6 +71,28 @@ class StockBase(object):
     def hist_last_date(self):
         return self.hist_data.index[0]
 
+    @property
+    def ma30(self):
+        return self._get_ma(30)
+
+    @property
+    def ma60(self):
+        return self._get_ma(60)
+
+    @property
+    def ma120(self):
+        return self._get_ma(120)
+
+    @property
+    def ma240(self):
+        return self._get_ma(240)
+
+    def _get_ma(self, window):
+        df = self.hist_data[['close']]
+        r = df.rolling(window=window)
+        df = r.mean()
+        return df.rename(columns={'close': 'ma%d' % window})
+
     def get_hist_date(self, loc):
         return self.hist_data.index[loc]
 

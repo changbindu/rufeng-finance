@@ -34,7 +34,8 @@ class Analyzer(object):
         return self._selected, global_status
 
     def _analyze_index(self):
-        return False
+        sz_index = self.indexs['000001']
+        return sz_index.hist_data.ma10[0] > sz_index.hist_data.ma20[0]
 
     def _analyze_single_stock(self, stock):
         """return if this stock is good"""
