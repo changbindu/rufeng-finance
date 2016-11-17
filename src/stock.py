@@ -8,10 +8,10 @@ from collections import MutableMapping
 from pandas import DataFrame
 
 class StockBase(object):
-    def __init__(self):
+    def __init__(self, code=None, name=None):
         # Basic info
-        self.code = None  # 代码
-        self.name = None  # 名称
+        self.code = code  # 代码
+        self.name = name  # 名称
 
         # data and update info
         self.last_update = None
@@ -45,6 +45,7 @@ class StockBase(object):
     def sanitize(self):
         if self.hist_data is not None:
             # self.hist_data.index = self.hist_data.index.map(np.datetime64)
+            self.hist_data.index = self.hist_data.index.map(str)
             self.hist_data.sort_index(ascending=False, inplace=True)
 
     def check(self):
@@ -79,8 +80,8 @@ class StockBase(object):
 
 class Stock(StockBase):
     ''' stock class'''
-    def __init__(self):
-        super(Stock, self).__init__()
+    def __init__(self, code=None, name=None):
+        super(Stock, self).__init__(code=code, name=name)
         # Basics
         self.industry = None # 所属行业
         self.area = None # 地区
@@ -170,8 +171,17 @@ class Stock(StockBase):
 
 
 class Index(StockBase):
-    def __init__(self):
-        super(Index, self).__init__()
+    index_name_map = {'000001': ('sh', '上证指数'),
+                      '399001': ('sz', '深圳成指'),
+                      '000300': ('hs300', '沪深300指数'),
+                      '000016': ('sz50', '上证50'),
+                      '399101': ('zxb', '中小板'),
+                      '399005': ('cyb', '创业板')
+                      }
+
+    def __init__(self, code=None, name=None, symbol=None):
+        super(Index, self).__init__(code=code, name=name)
+        self.symbol = symbol
 
 
 class StockCalendar(object):

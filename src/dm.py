@@ -29,7 +29,7 @@ class LocalDataManager(object):
         dstock = self.stock_collection.find_one({'code': code})
         if dstock is None:
             return None
-        stock = self.__from_dict(dstock)
+        stock = self.__from_dict(dstock, False)
         stock.sanitize()
         return stock
 
@@ -38,7 +38,7 @@ class LocalDataManager(object):
         cursor = self.stock_collection.find(filter)
         with tqdm(total=cursor.count()) as pbar:
             for dstock in cursor:
-                stock = self.__from_dict(dstock)
+                stock = self.__from_dict(dstock, False)
                 stock.sanitize()
                 slist.append(stock)
                 show_process and pbar.update()
@@ -68,8 +68,8 @@ class LocalDataManager(object):
             self.stock_collection.drop()
 
     @staticmethod
-    def __from_dict(data):
-        stock = Stock()
+    def __from_dict(data, is_index):
+        stock = Index() if is_index else Stock()
         for k, v in data.items():
             if k == '_id':
                 continue
@@ -94,7 +94,7 @@ class LocalDataManager(object):
         dindex = self.indexes_collection.find_one({'code': code})
         if dindex is None:
             return None
-        index = self.__from_dict(dindex)
+        index = self.__from_dict(dindex, True)
         index.sanitize()
         return index
 
@@ -102,7 +102,7 @@ class LocalDataManager(object):
         ilist = []
         cursor = self.indexes_collection.find(filter)
         for dindex in cursor:
-            index = self.__from_dict(dindex)
+            index = self.__from_dict(dindex, True)
             index.sanitize()
             ilist.append(index)
         return ilist
@@ -163,7 +163,6 @@ class DataManager(object):
                 self.load_from_db(remove_invalid=False)
             except KeyError as e:
                 logging.warning('%s, drop database' % str(e))
-                self._local_dm.drop_stock()
         else:
             logging.info('force update all stocks, ignore local database')
 
@@ -207,7 +206,7 @@ class DataManager(object):
         self._extract_from_dataframe(df)
 
         logging.info('getting history trading data from tushare')
-        data_full = self._pick_hist_data_and_save(max_num_threads)  # anything that pulling data must before here
+        data_full = self._pick_hist_data_and_save(self._stocks, False, max_num_threads)  # anything that pulling data must before here
 
         self._remove_unavailable_stocks()
 
@@ -232,8 +231,7 @@ class DataManager(object):
         logging.info('getting stock list from tushare')
         df = ts.get_stock_basics()
         for index, row in df.iterrows():
-            stock = Stock()
-            stock.code = index
+            stock = Stock(code=index)
             for col_name in df.columns:
                 # we only trust these data
                 if not col_name in ('name', 'industry', 'area', 'timeToMarket'):
@@ -245,26 +243,6 @@ class DataManager(object):
                     value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
                     stock.__setattr__(col_name, value)
             self._stocks[stock.code] = stock
-
-    def _get_indexes(self):
-        index_map = {'000001': 'sh', '399001': 'sz', '000300': 'hs300', '000016': 'sz50', '399101': 'zxb', '399005': 'cyb'}
-        logging.info('get indexes info')
-        df = ts.get_index()
-        for i, row in df.iterrows():
-            if row['code'] in index_map:
-                index = Index()
-                index.code = row['code']
-                index.name = row['name']
-                self._indexes[index.code] = index
-
-        for code, index in self._indexes.items():
-            logging.info('get all hist data of index %s' % str(index))
-            df = ts.get_hist_data(index_map[code])
-            logging.info('got %d days trading data' % df.index.size)
-            df.index = df.index.map(str)
-            index.hist_data = df
-            index.last_update = datetime.datetime.now()
-            self._local_dm.save_index(index)
 
     def load_from_db(self, remove_invalid=True):
         """load stocks from local database only"""
@@ -322,14 +300,22 @@ class DataManager(object):
             del self._stocks[stock.code]
             logging.warning('removed unavailable stock %s (maybe not IPO yet)' % stock)
 
-    def _pick_hist_data_and_save(self, max_num_threads):
+    def _get_indexes(self):
+        for k, v in Index.index_name_map.items():
+                index = Index(code=k, symbol=v[0], name=v[1])
+                self._indexes[index.code] = index
+
+        logging.info('get all hist data of indexes')
+        self._pick_hist_data_and_save(self._indexes, True)
+
+    def _pick_hist_data_and_save(self, stocks, is_index, max_num_threads=1):
         threads = []
         squeue = Queue()
         today = datetime.date.today()
         update_to = StockCalendar().last_completed_trade_day()
         failed = False
 
-        for code, stock in self._stocks.items():
+        for code, stock in stocks.items():
             if stock.hist_data is None:
                 squeue.put(stock)
             elif stock.last_update <= datetime.datetime(update_to.year, update_to.month, update_to.day):
@@ -350,8 +336,13 @@ class DataManager(object):
                     logging.debug('[%d/%d] picking hist data (%s-%s) of %s' % (
                                 total_to_update - squeue.qsize(), total_to_update,
                                 start_from, update_to, stock))
-                    hist = ts.get_hist_data(stock.code, start=str(start_from), end=str(update_to), ktype='D', retry_count=5, pause=0)
-                    fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
+                    hist = ts.get_hist_data(stock.symbol if is_index else stock.code,
+                                            start=str(start_from), end=str(update_to), ktype='D',
+                                            retry_count=5, pause=0)
+                    if not is_index:
+                        fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
+                    else:
+                        fq_factor = DataFrame()
                 except IOError as e:
                     logging.error('exception: %s', str(e))
                     logging.error('cannot get hist/qfq data of %s' % stock)
@@ -374,11 +365,14 @@ class DataManager(object):
                                 stock, stock.hist_data.index.size,
                                 append and ', appended %d days'%hist.index.size or ''))
                         stock.last_update = datetime.datetime.now()
-                        self._local_dm.save_stock(stock)
+                        if is_index:
+                            self._local_dm.save_index(stock)
+                        else:
+                            self._local_dm.save_stock(stock)
                 squeue.task_done()
 
         num_threads = min(max_num_threads, int(squeue.qsize() / 2))
-        logging.info('getting history data of %d stocks using %d threads' % (squeue.qsize(), num_threads))
+        logging.info('getting history data of %d stocks/indexes using %d threads' % (squeue.qsize(), num_threads))
         for i in range(0, num_threads):
                 thread = Thread(name = "PickingThread%d" % i, target=__pick_history)
                 thread.daemon = True
@@ -409,5 +403,5 @@ class DataManager(object):
         return self._local_dm.find_one_index(code)
 
     def drop_local_data(self, code):
-        self._local_dm.drop_stock(code)
         self._local_dm.drop_index(code)
+        self._local_dm.drop_stock(code)
