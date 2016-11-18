@@ -88,10 +88,11 @@ class StockBase(object):
         return self._get_ma(240)
 
     def _get_ma(self, window):
-        df = self.hist_data[['close']]
+        df = self.hist_data[['open', 'close', 'low', 'high', 'volume', 'turnover']].sort_index(ascending=True)
         r = df.rolling(window=window)
         df = r.mean()
-        return df.rename(columns={'close': 'ma%d' % window})
+        df.sort_index(ascending=False, inplace=True)
+        return df
 
     def get_hist_date(self, loc):
         return self.hist_data.index[loc]

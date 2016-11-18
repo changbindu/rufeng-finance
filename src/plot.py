@@ -76,19 +76,24 @@ class StockPlot(object):
         ax_price.text(left, top - 3*height, 'mktcap=%.2f亿' % (stock.mktcap/10000), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
 
         if not qfq:
-            t2 = ax_price.text(left, top - 4*height, 'EMA(5)', color='b', fontsize=8, transform=ax_price.transAxes)
-            t3 = ax_price.text(left, top - 5*height, 'EMA(10)', color='y', fontsize=8, transform=ax_price.transAxes)
-            t4 = ax_price.text(left, top - 6*height, 'EMA(20)', color='r', fontsize=8, transform=ax_price.transAxes)
+            ax_price.text(left, top - 4*height, 'EMA(5)', color='b', fontsize=8, transform=ax_price.transAxes)
+            ax_price.text(left, top - 5*height, 'EMA(10)', color='y', fontsize=8, transform=ax_price.transAxes)
+            ax_price.text(left, top - 6*height, 'EMA(20)', color='g', fontsize=8, transform=ax_price.transAxes)
+            ax_price.text(left, top - 7*height, 'EMA(30)', color='r', fontsize=8, transform=ax_price.transAxes)
             ax_price.plot(stock_data.ma5.values, color='b', lw=1)
             ax_price.plot(stock_data.ma10.values, color='y', lw=1)
-            ax_price.plot(stock_data.ma20.values, color='r', lw=1)
+            ax_price.plot(stock_data.ma20.values, color='g', lw=1)
+            ax_price.plot(stock.ma30.sort_index(ascending=True).close.values, color='r', lw=1)
+            #ax_price.plot(stock.ma60.sort_index(ascending=True).close.values, color='r', lw=1)
+            #ax_price.plot(stock.ma120.sort_index(ascending=True).close.values, color='r', lw=1)
+
 
         s = '%s O:%1.2f H:%1.2f L:%1.2f C:%1.2f, V:%1.1fM Chg:%+1.2f' % (
             stock_data.index[-1],
             stock_data.open[-1], stock_data.high[-1], stock_data.low[-1], stock_data.close[-1],
             stock_data.volume[-1] * 1e-6,
             stock_data.close[-1] - stock_data.open[-1])
-        t5 = ax_price.text(0.5, top, s, fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(0.5, top, s, fontsize=8, transform=ax_price.transAxes)
 
         plt.ylabel('Price')
         plt.ylim(ymin=stock_data.low.min()-stock_data.low.min()/30, ymax=stock_data.high.max()+stock_data.high.max()/30)
