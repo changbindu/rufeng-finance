@@ -11,6 +11,7 @@ import os
 import logging.config, coloredlogs
 from optparse import OptionParser, OptionGroup
 import multiprocessing
+from pandas import DataFrame
 from tqdm import tqdm
 import yaml
 
@@ -104,13 +105,19 @@ class RufengFinance(object):
 
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db()
-        logging.info('all %d available stocks can be analyzed' % len(self._dm.stocks))
-        logging.info('%-6s %-8s %6s %-30s %-18s' % ('code', 'name', 'price', 'hist_data', 'update'))
+        df = DataFrame(columns=('code', 'name', 'price', 'hist_data', 'update'))
         for code, stock in self._dm.stocks.items():
-            logging.info('%-6s %-4s %5.2f %-30s %-18s' % (
-                         stock.code, stock.name, stock.price,
-                         '%4d[%s - %s]' % (stock.hist_data.index.size, stock.hist_data.tail(1).index[0], stock.hist_data.index[0]),
-                         stock.last_update.strftime("%Y-%m-%d %H:%M:%S")))
+            df.loc[df.index.size] = {'code': code, 'name': stock.name, 'price': stock.price,
+                       'hist_data':'%4d[%s - %s]' % (stock.hist_data.index.size, stock.hist_data.tail(1).index[0], stock.hist_data.index[0]),
+                       'update': stock.last_update.strftime("%Y-%m-%d %H:%M:%S")
+                    }
+        logging.info('all %d available stocks can be analyzed' % len(self._dm.stocks))
+        print(df.to_string())
+
+        if options.output:
+            f = open(options.output, "w", encoding="utf-8")
+            df.to_html(f)
+            f.close()
 
     def cmd_plot(self, options, cmd_args):
         if len(cmd_args) < 1:
