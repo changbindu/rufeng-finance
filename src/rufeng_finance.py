@@ -66,6 +66,13 @@ class RufengFinance(object):
                          help="overlay index history on price")
         parser.add_option_group(group)
 
+        # for analyze options
+        group = OptionGroup(parser, 'Analyze Options', description='')
+        group.add_option("--plot-all",
+                         action="store_true", dest="plot_all", default=False,
+                         help="plot all stocks, not only good ones")
+        parser.add_option_group(group)
+
         (options, args) = parser.parse_args()
         if len(args) < 1:
             parser.error("incorrect number of arguments, missing cmd")
@@ -214,7 +221,7 @@ class RufengFinance(object):
         if options.output:
             logging.info('generating html report...')
             os.makedirs(options.output, exist_ok=True)
-            analyzer.generate_report(options.output)
+            analyzer.generate_report(options.output, only_plot_good=not options.plot_all)
             logging.info('done')
 
     def cmd_monitor(self, options, cmd_args):

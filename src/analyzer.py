@@ -47,6 +47,9 @@ class Analyzer(object):
         [pool.putRequest(req) for req in requests]
         pool.wait()
 
+        self.good_stocks = sorted(self.good_stocks, key=lambda result: result.stock.industry)
+        self.bad_stocks = sorted(self.bad_stocks, key=lambda result: result.stock.industry)
+
     def _analyze_index(self):
         sz_index = self.indexs['000001']
         return sz_index.hist_data.ma10[0] > sz_index.hist_data.ma20[0]
@@ -129,7 +132,7 @@ class Analyzer(object):
         finally:
             pass
 
-    def generate_report(self, out_dir):
+    def generate_report(self, out_dir, only_plot_good=True):
         env = Environment(loader=FileSystemLoader('templates'))
         template = env.get_template('report.jinja2')
         output = template.render({
@@ -144,9 +147,9 @@ class Analyzer(object):
         os.makedirs(img_dir, exist_ok=True)
 
         plot = StockPlot()
-        pbar = tqdm(self.good_stocks)
+        pbar = tqdm(self.good_stocks + (self.bad_stocks if not only_plot_good else []))
         for result in pbar:
             stock = result.stock
-            pbar.set_description("Ploting %s" % (stock.code))
+            pbar.set_description("Plotting %s" % (stock.code))
             plot.plot_hist(stock, self.indexs['000001'], path=os.path.join(img_dir, '%s.png' % stock.code))
         pbar.close()
