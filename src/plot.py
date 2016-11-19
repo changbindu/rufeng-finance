@@ -40,7 +40,7 @@ class StockPlot(object):
                           width=.75, colorup='g', colordown='r', alpha=0.75)
 
         for i, factor in enumerate(stock_data.factor):
-            if i != 0 and factor != stock_data.factor[i-1]:
+            if i != 0 and round(factor, 2) != round(stock_data.factor[i-1], 2):
                 ax_price.annotate('Q(f=%.3f)' % factor,
                     xy=(i, stock_data.open[i]), xycoords='data',
                     xytext=(0, stock_data.high.max()/10), textcoords='offset points',
@@ -71,9 +71,9 @@ class StockPlot(object):
         left, height, top = 0.025, 0.03, 0.9
         t1 = ax_price.text(left, top, '%s-%s,%s,%s' % (stock.code, stock.name, stock.area, stock.industry),
                            fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
-        ax_price.text(left, top - height, 'pe=%.2f' % (stock.pe), fontsize=8, transform=ax_price.transAxes)
-        ax_price.text(left, top - 2*height, 'nmc=%.2f亿' % (stock.nmc/10000), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
-        ax_price.text(left, top - 3*height, 'mktcap=%.2f亿' % (stock.mktcap/10000), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(left, top - height, 'pe=%.2f' % (stock.pe if stock.pe else 0.0), fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(left, top - 2*height, 'nmc=%.2f亿' % (stock.nmc/10000 if stock.nmc else 0.0), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
+        ax_price.text(left, top - 3*height, 'mktcap=%.2f亿' % (stock.mktcap/10000 if stock.mktcap else 0.0), fontproperties=fp, fontsize=8, transform=ax_price.transAxes)
 
         if not qfq:
             ax_price.text(left, top - 4*height, 'EMA(5)', color='b', fontsize=8, transform=ax_price.transAxes)
