@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <link rel="stylesheet" href="style.css"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Rufeng-finance Analyzer Report</title>
+</head>
+ <script language="javascript">
+    function showPic(e, sUrl){
+        var x,y;
+        x = e.clientX;
+        y = e.clientY;
+        document.getElementById("candlestick").style.left = x+2+'px';
+        document.getElementById("candlestick").style.top = 0;
+        document.getElementById("candlestick").innerHTML = "<img border=0 style='width: 100%;' src=\"" + sUrl + "\">";
+        document.getElementById("candlestick").style.display = "";
+    }
+    function hiddenPic(){
+        document.getElementById("candlestick").innerHTML = "";
+        document.getElementById("candlestick").style.display = "none";
+    }
+ </script>
+<!-- CSS goes in the document HEAD or added to your external stylesheet -->
+<style type="text/css">
+table.hovertable {
+	font-family: verdana,arial,sans-serif;
+	font-size:11px;
+	color:#333333;
+	border-width: 1px;
+	border-color: #999999;
+	border-collapse: collapse;
+}
+table.hovertable th {
+	background-color:#c3dde0;
+	border-width: 1px;
+	padding: 8px;
+	border-style: solid;
+	border-color: #a9c6c9;
+}
+table.hovertable tr {
+	background-color:#d4e3e5;
+}
+table.hovertable td {
+	border-width: 1px;
+	padding: 8px;
+	border-style: solid;
+	border-color: #a9c6c9;
+}
+</style>
+<body>
+<div id="good_stocks">
+    <h2 style="text-align:center">Analyzing Report of Rufeng-finace</h2>
+    <div class="text" style=" text-align:center;">{{ date }}</div>
+    <h3>List of {{ good_stocks|length }} Good stocks:</h3>
+    <table border="1" class="hovertable">
+    <thead>
+    <tr style="text-align: right;">
+        <th></th>
+        <th>code</th>
+        <th>name</th>
+        <th>price</th>
+        <th>pe</th>
+        <th>nmc</th>
+        <th>mktcap</th>
+        <th>area</th>
+        <th>industry</th>
+        <th>status</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for result in good_stocks %}
+    <tr>
+        <th>{{ loop.index }}</th>
+        <td><a href="images/{{ result.stock.code }}.png" target="_blank" onmouseout="hiddenPic();" onmousemove="showPic(event,'images/{{ result.stock.code }}.png');">{{ result.stock.code }}</a></td>
+        <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
+        <td>{{ result.stock.price }}</td>
+        <td>{{ result.stock.pe }}</td>
+        <td>{{ result.stock.nmc/10000 if result.stock.nmc is not none else 0.0|round(2, 'common') }}亿</td>
+        <td>{{ result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0|round(2, 'common') }}亿</td>
+        <td>{{ result.stock.area }}</td>
+        <td>{{ result.stock.industry }}</td>
+        <td>{{ result.status }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+<div id="candlestick" style="display: none; position: fixed; z-index: 100; max-width:100%; margin-top:1%;"></div>
+
+<div id="bad_stocks">
+    <h3 style="color: red">List of {{ bad_stocks|length }} Bad stocks:</h3>
+    <table border="1" class="hovertable">
+    <thead>
+    <tr style="text-align: right;">
+        <th></th>
+        <th>code</th>
+        <th>name</th>
+        <th>price</th>
+        <th>pe</th>
+        <th>nmc</th>
+        <th>mktcap</th>
+        <th>area</th>
+        <th>industry</th>
+        <th>status</th>
+        <th>reason</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for result in bad_stocks %}
+    <tr>
+        <th>{{ loop.index }}</th>
+        <td><a href="images/{{ result.stock.code }}.png" target="_blank" onmouseout="hiddenPic();" onmousemove="showPic(event,'images/{{ result.stock.code }}.png');">{{ result.stock.code }}</a></td>
+        <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
+        <td>{{ result.stock.price }}</td>
+        <td>{{ result.stock.pe }}</td>
+        <td>{{ result.stock.nmc/10000 if result.stock.nmc is not none else 0.0|round(2, 'common') }}亿</td>
+        <td>{{ result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0|round(2, 'common') }}亿</td>
+        <td>{{ result.stock.area }}</td>
+        <td>{{ result.stock.industry }}</td>
+        <td>{{ result.status }}</td>
+        <td>{{ result.log }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+
+<div id="footer">
+    Powered by rufeng-finace
+    &copy; Copyright 2016 by Du, Changbin <pre><changbin.du@hotmail.com></pre>.
+</div>
+</body>

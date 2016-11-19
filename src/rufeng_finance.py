@@ -105,19 +105,21 @@ class RufengFinance(object):
 
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db()
-        df = DataFrame(columns=('code', 'name', 'price', 'hist_data', 'update'))
+        list = []
         for code, stock in self._dm.stocks.items():
-            df.loc[df.index.size] = {'code': code, 'name': stock.name, 'price': stock.price,
+            list.append({'code': code, 'name': stock.name, 'price': stock.price,
                        'hist_data':'%4d[%s - %s]' % (stock.hist_data.index.size, stock.hist_data.tail(1).index[0], stock.hist_data.index[0]),
                        'update': stock.last_update.strftime("%Y-%m-%d %H:%M:%S")
-                    }
+                    })
+        df = DataFrame(list)
+
         logging.info('all %d available stocks can be analyzed' % len(self._dm.stocks))
-        print(df.to_string())
+        print(df.to_string(columns=('code', 'name', 'price', 'hist_data', 'update')))
 
         if options.output:
-            f = open(options.output, "w", encoding="utf-8")
-            df.to_html(f)
-            f.close()
+            #df['code'] = df['code'].apply(lambda x: '<a href="https://touzi.sina.com.cn/public/stock/sz{0}">{0}</a>'.format(x))
+            with open(options.output, "w+", encoding="utf-8") as f:
+                df.to_html(f, escape=False, columns=('code', 'name', 'price', 'hist_data', 'update'))
 
     def cmd_plot(self, options, cmd_args):
         if len(cmd_args) < 1:
@@ -192,24 +194,28 @@ class RufengFinance(object):
         analyzer = Analyzer(self._dm.stocks, self._dm.indexes, config)
         logging.info('all %d available stocks will be analyzed' % len(analyzer.stocks))
         logging.info('-----------invoking data analyzer module-------------')
-        selected_stocks, global_status = analyzer.analyze(threads=options.threads)
+        analyzer.analyze(threads=options.threads)
         logging.info('-------------------analyze done----------------------')
-        logging.info('list of good %d stocks%s:' % (len(selected_stocks),
-                     options.output and ' and save plots to %s' % options.output or ''))
 
-        for stock in selected_stocks:
-            logging.info('%s: price %.2f pe %.2f nmc %.2f mktcap %.2f area %s industry %s',
-                         stock, stock.price, stock.pe, stock.nmc/10000, stock.mktcap/10000, stock.area, stock.industry)
-        logging.info('global market status: %s', 'Good!' if global_status else 'Bad!')
+        list = []
+        for result in analyzer.good_stocks:
+            stock = result.stock
+            list.append({'code': stock.code, 'name': stock.name, 'price': stock.price,
+                         'pe': stock.pe, 'nmc': stock.nmc/10000, 'mktcap': stock.mktcap/10000,
+                         'area': stock.area, 'industry': stock.industry
+                        })
+        df = DataFrame(list)
+
+        logging.info('list of good %d stocks%s:' % (len(analyzer.good_stocks),
+                     options.output and ' and save plots to %s' % options.output or ''))
+        print(df.to_string(columns=('code', 'name', 'price', 'pe', 'nmc', 'mktcap', 'area', 'industry')))
+        logging.info('global market status: %s' % analyzer.global_status)
 
         if options.output:
-            if not os.path.exists(options.output):
-                os.makedirs(options.output)
-            plot = StockPlot()
-            pbar = tqdm(selected_stocks)
-            for stock in pbar:
-                pbar.set_description("Ploting %s[%s]" % (stock.code, stock.name))
-                plot.plot_hist(stock, os.path.join(options.output, '%s[%s].png' % (stock.code, stock.name)))
+            logging.info('generating html report...')
+            os.makedirs(options.output, exist_ok=True)
+            analyzer.generate_report(options.output)
+            logging.info('done')
 
     def cmd_monitor(self, options, cmd_args):
         config = self._config['monitor']

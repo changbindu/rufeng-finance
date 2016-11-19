@@ -1,15 +1,31 @@
 # coding=utf-8
 __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
+import os
 import math
 import logging
+import datetime
 from threadpool import ThreadPool, makeRequests
+from jinja2 import Template, Environment, FileSystemLoader
+from tqdm import tqdm
+from plot import StockPlot
+
+
+class Result(object):
+    def __init__(self, stock):
+        self.stock = stock
+        self.log = ''
+        self.status = 'NAN'
 
 
 class Analyzer(object):
     def __init__(self, stocks, indexes, config):
         self.stocks = stocks
         self.indexs = indexes
+
+        self.global_status = 'NAN'
+        self.good_stocks = []
+        self.bad_stocks = []
 
         self.config_min_hist_data = max(config['min_hist_data'], 10)
         self.config_max_price = config['max_price']
@@ -23,15 +39,12 @@ class Analyzer(object):
         self.config_position = config['position']
 
     def analyze(self, threads=1):
-        self._selected = []
-        global_status = self._analyze_index()
+        self.global_status = 'GOOD' if self._analyze_index() else 'BAD'
 
         pool = ThreadPool(threads)
         requests = makeRequests(self._analyze_single_stock, [s for _, s in self.stocks.items()])
         [pool.putRequest(req) for req in requests]
         pool.wait()
-
-        return self._selected, global_status
 
     def _analyze_index(self):
         sz_index = self.indexs['000001']
@@ -40,68 +53,97 @@ class Analyzer(object):
     def _analyze_single_stock(self, stock):
         """return if this stock is good"""
         hist_data = stock.hist_data
+        result = Result(stock)
 
-        # 创业板
-        if self.config_exclude_gem and stock.code.startswith('300'):
-            logging.debug('%s: is in Growth Enterprise Market' % stock)
-            return False
+        class BadStockException(Exception):
+            pass
 
-        # 停牌
-        if self.config_exclude_suspension and math.isnan(stock.price):
-            logging.debug('%s: is suspending' % stock)
-            return False
+        try:
+            # 创业板
+            if self.config_exclude_gem and stock.code.startswith('300'):
+                raise BadStockException('in Growth Enterprise Market')
 
-        # ST
-        if self.config_exclude_st and stock.name.startswith('*ST'):
-            logging.debug('%s: is Special Treatment (ST)' % stock)
-            return False
+            # 停牌
+            if self.config_exclude_suspension and math.isnan(stock.price):
+                raise BadStockException('suspending')
 
-        if stock.hist_len < self.config_min_hist_data:
-            logging.debug('%s: only %d days history data' % (stock, stock.hist_len))
-            return False
+            # ST
+            if self.config_exclude_st and stock.name.startswith('*ST'):
+                raise BadStockException('Special Treatment (ST)')
 
-        # 最新价格
-        if hist_data.close[0] > self.config_max_price:
-            logging.debug('%s: price is too high, %d RMB' % (stock, hist_data.close[0]))
-            return False
+            if stock.hist_len < self.config_min_hist_data:
+                raise BadStockException('only %d days history data' % (stock.hist_len))
 
-        # 流通市值
-        if stock.nmc is not None and stock.nmc/10000 > self.config_max_nmc:
-            logging.debug('%s: circulated market value is too high, %dY RMB' % (stock, stock.nmc/10000))
-            return False
+            # 最新价格
+            if hist_data.close[0] > self.config_max_price:
+                raise BadStockException('price is too high, %d RMB' % (hist_data.close[0]))
 
-        # 总市值
-        if stock.mktcap is not None and stock.mktcap/10000 > self.config_max_mktcap:
-            logging.debug('%s: total market cap value is too high, %dY RMB' % (stock, stock.mktcap/10000))
-            return False
+            # 流通市值
+            if stock.nmc is not None and stock.nmc/10000 > self.config_max_nmc:
+                raise BadStockException('circulated market value is too high, %dY RMB' % (stock.nmc/10000))
 
-        # 市盈率
-        if stock.pe is not None and stock.pe > self.config_max_pe:
-            logging.debug('%s: pe is too high, %d' % (stock, stock.pe))
-            return False
+            # 总市值
+            if stock.mktcap is not None and stock.mktcap/10000 > self.config_max_mktcap:
+                raise BadStockException('total market cap value is too high, %dY RMB' % (stock.mktcap/10000))
 
-        # 5日平均换手率
-        d5_avg = stock.get_turnover_avg(5)
-        if d5_avg < self.config_min_d5_turnover_avg:
-            logging.debug('%s: 5 days average turnover is too low, %.2f%%' % (stock, d5_avg))
-            return False
+            # 市盈率
+            if stock.pe is not None and stock.pe > self.config_max_pe:
+                raise BadStockException('PE is too high, %d' % (stock.pe))
 
-        # delay this until we really need
-        qfq_data = stock.qfq_data
+            # 5日平均换手率
+            d5_avg = stock.get_turnover_avg(5)
+            if d5_avg < self.config_min_d5_turnover_avg:
+                raise BadStockException('5 days average turnover is too low, %.2f%%' % (d5_avg))
 
-        # 当前走势位置
-        if stock.hist_len > 60:
-            min = qfq_data.close[:60].min()
-            hratio = (qfq_data.close[0]-min)/min
-            if hratio > self.config_position[0]:
-                logging.debug('%s: current price is higher than 60 days min %.2f %.2f%%' % (stock, min, hratio*100))
-                return False
-        if stock.hist_len > 420:
-            max = qfq_data.close[:420].max()
-            hratio = (max - qfq_data.close[0]) / qfq_data.close[0]
-            if hratio < self.config_position[1]:
-                logging.debug('%s: 420 days max %.2f is only higher than current %.2f%%' % (stock, max, hratio*100))
-                return False
+            # delay this until we really need
+            qfq_data = stock.qfq_data
 
-        self._selected.append(stock)
-        return True
+            # 当前走势位置
+            if stock.hist_len > 60:
+                min = qfq_data.close[:60].min()
+                hratio = (qfq_data.close[0]-min)/min
+                if hratio > self.config_position[0]:
+                    raise BadStockException('current price is higher than 60 days min %.2f %.2f%%' % (min, hratio*100))
+            if stock.hist_len > 420:
+                max = qfq_data.close[:420].max()
+                hratio = (max - qfq_data.close[0]) / qfq_data.close[0]
+                if hratio < self.config_position[1]:
+                    raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max, hratio*100))
+
+            logging.debug('%s: good' % stock)
+            result.status = 'GOOD'
+            self.good_stocks.append(result)
+        except BadStockException as e:
+            logging.debug('%s: %s' % (stock, str(e)))
+            result.status = 'BAD'
+            result.log = str(e)
+            self.bad_stocks.append(result)
+        except Exception as e:
+            msg = 'exception occurred: %s' % e
+            result.status = 'BAD'
+            result.log = msg
+            self.bad_stocks.append(result)
+        finally:
+            pass
+
+    def generate_report(self, out_dir):
+        env = Environment(loader=FileSystemLoader('templates'))
+        template = env.get_template('report.jinja2')
+        output = template.render({
+                    'good_stocks': self.good_stocks,
+                    'bad_stocks': self.bad_stocks,
+                    'global_status': self.global_status,
+                    'date': datetime.date.today()})
+        with open(os.path.join(out_dir, 'index.html'), "w+") as f:
+            f.write(output)
+
+        img_dir = os.path.join(out_dir, 'images')
+        os.makedirs(img_dir, exist_ok=True)
+
+        plot = StockPlot()
+        pbar = tqdm(self.good_stocks)
+        for result in pbar:
+            stock = result.stock
+            pbar.set_description("Ploting %s" % (stock.code))
+            plot.plot_hist(stock, self.indexs['000001'], path=os.path.join(img_dir, '%s.png' % stock.code))
+        pbar.close()
