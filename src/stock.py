@@ -102,6 +102,8 @@ class StockBase(object):
 
 
 class Stock(StockBase):
+    st_prefix = ('*ST', 'ST', 'S*ST', 'SST')
+
     ''' stock class'''
     def __init__(self, code=None, name=None):
         super(Stock, self).__init__(code=code, name=name)

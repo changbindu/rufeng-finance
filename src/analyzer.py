@@ -8,6 +8,7 @@ import datetime
 from threadpool import ThreadPool, makeRequests
 from jinja2 import Template, Environment, FileSystemLoader
 from tqdm import tqdm
+from stock import Stock
 from plot import StockPlot
 
 
@@ -68,8 +69,10 @@ class Analyzer(object):
                 raise BadStockException('suspending')
 
             # ST
-            if self.config_exclude_st and stock.name.startswith('*ST'):
-                raise BadStockException('Special Treatment (ST)')
+            if self.config_exclude_st:
+                for p in Stock.st_prefix:
+                    if stock.name.startswith(p):
+                        raise BadStockException('Special Treatment (ST)')
 
             if stock.hist_len < self.config_min_hist_data:
                 raise BadStockException('only %d days history data' % (stock.hist_len))
