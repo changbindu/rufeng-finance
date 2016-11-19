@@ -151,5 +151,8 @@ class Analyzer(object):
         for result in pbar:
             stock = result.stock
             pbar.set_description("Plotting %s" % (stock.code))
+            path = os.path.join(img_dir, '%s.png' % stock.code)
+            if os.path.exists(path):
+                continue  # skip existed plots
             plot.plot_hist(stock, self.indexs['000001'], path=os.path.join(img_dir, '%s.png' % stock.code))
         pbar.close()

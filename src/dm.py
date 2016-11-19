@@ -246,7 +246,7 @@ class DataManager(object):
 
     def load_from_db(self, remove_invalid=True):
         """load stocks from local database only"""
-        logging.info('try load stock data from local database')
+        logging.info('try to load stock data from local database')
         count = 0
         for stock in self._local_dm.find_stock(show_process=True):
             self._stocks[stock.code] = stock
