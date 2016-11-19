@@ -21,7 +21,7 @@ class LocalDataManager(object):
     """we use mongodb to cache data"""
     def __init__(self):
         client = MongoClient('localhost', 27017)
-        self.db = client.rufeng_finance_database
+        self.db = client.rufeng_finance
         self.stock_collection = self.db.stocks
         self.indexes_collection = self.db.indexes
 
