@@ -76,8 +76,8 @@ table.hovertable td {
         <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
         <td>{{ result.stock.price }}</td>
         <td>{{ result.stock.pe }}</td>
-        <td>{{ result.stock.nmc/10000 if result.stock.nmc is not none else 0.0|round(2, 'common') }}亿</td>
-        <td>{{ result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0|round(2, 'common') }}亿</td>
+        <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}亿</td>
+        <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}亿</td>
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
@@ -114,8 +114,8 @@ table.hovertable td {
         <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
         <td>{{ result.stock.price }}</td>
         <td>{{ result.stock.pe }}</td>
-        <td>{{ result.stock.nmc/10000 if result.stock.nmc is not none else 0.0|round(2, 'common') }}亿</td>
-        <td>{{ result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0|round(2, 'common') }}亿</td>
+        <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}亿</td>
+        <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}亿</td>
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
