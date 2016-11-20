@@ -101,8 +101,8 @@ table.hovertable td {
         <td>{{ result.stock.pe }}</td>
         <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}</td>
         <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}</td>
-        <td>{{ result.stock.get_turnover_avg(5)|round(2) }}%</td>
-        <td>{{ result.stock.get_turnover_avg(30)|round(2) }}%</td>
+        <td>{{ result.stock.get_turnover_avg(5)|round(2) }}</td>
+        <td>{{ result.stock.get_turnover_avg(30)|round(2) }}</td>
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
@@ -143,8 +143,8 @@ table.hovertable td {
         <td>{{ result.stock.pe }}</td>
         <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}</td>
         <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}</td>
-        <td>{{ result.stock.get_turnover_avg(5)|round(2) }}%</td>
-        <td>{{ result.stock.get_turnover_avg(30)|round(2) }}%</td>
+        <td>{{ result.stock.get_turnover_avg(5)|round(2) }}</td>
+        <td>{{ result.stock.get_turnover_avg(30)|round(2) }}</td>
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
