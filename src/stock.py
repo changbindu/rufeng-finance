@@ -5,6 +5,7 @@ import json
 import datetime
 import logging
 from collections import MutableMapping
+import numpy as np
 from pandas import DataFrame
 
 class StockBase(object):
@@ -65,11 +66,11 @@ class StockBase(object):
 
     @property
     def hist_start_date(self):
-        return self.hist_data.index[-1]
+        return np.datetime64(self.hist_data.index[-1], 'D')
 
     @property
     def hist_last_date(self):
-        return self.hist_data.index[0]
+        return np.datetime64(self.hist_data.index[0], 'D')
 
     @property
     def ma30(self):

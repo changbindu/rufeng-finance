@@ -206,7 +206,8 @@ class DataManager(object):
         self._extract_from_dataframe(df)
 
         logging.info('getting history trading data from tushare')
-        data_full = self._pick_hist_data_and_save(self._stocks, False, max_num_threads)  # anything that pulling data must before here
+        start_from = self._indexes['000001'].hist_last_date
+        data_full = self._pick_hist_data_and_save(self._stocks, False, start_from, max_num_threads)  # anything that pulling data must before here
 
         self._remove_unavailable_stocks()
 
@@ -306,12 +307,12 @@ class DataManager(object):
                 self._indexes[index.code] = index
 
         logging.info('get all hist data of indexes')
-        self._pick_hist_data_and_save(self._indexes, True)
+        start_from = datetime.date.today() - datetime.timedelta(days=365 * self._data_period_y)
+        self._pick_hist_data_and_save(self._indexes, True, start_from)
 
-    def _pick_hist_data_and_save(self, stocks, is_index, max_num_threads=1):
+    def _pick_hist_data_and_save(self, stocks, is_index, start_from, max_num_threads=1):
         threads = []
         squeue = Queue()
-        today = datetime.date.today()
         update_to = StockCalendar().last_completed_trade_day()
         failed = False
 
@@ -325,12 +326,13 @@ class DataManager(object):
         total_to_update = squeue.qsize()
 
         def __pick_history():
+            nonlocal start_from
+
             while not squeue.empty():
                 stock = squeue.get()
-                start_from = today - datetime.timedelta(days=365*self._data_period_y)
-                append = np.datetime64(stock.hist_start_date, 'D') <= start_from if stock.hist_data is not None else False
+                append = stock.hist_start_date <= start_from if stock.hist_data is not None else False
                 if append:
-                    start_from = np.datetime64(stock.hist_last_date, 'D') if append else start_from
+                    start_from = stock.hist_last_date if append else start_from
 
                 try:
                     logging.debug('[%d/%d] picking hist data (%s-%s) of %s' % (
