@@ -375,12 +375,14 @@ class DataManager(object):
                             stock.hist_data = hist.join(fq_factor)
 
                         # WA: missing factor at 2014-07-08
-                        if not is_index and '2014-07-08' in stock.hist_data.index:
-                            i = stock.hist_data.index.get_loc('2014-07-08')
-                            if i == 0:
-                                logging.warning('%s: cannot fix missing factor' % stock)
-                            else:
-                                stock.hist_data.factor[i] = stock.hist_data.factor[i-1]
+                        for miss_factor in ('2014-07-08',):
+                            if not is_index and miss_factor in stock.hist_data.index\
+                                    and math.isnan(stock.hist_data.factor[miss_factor]):
+                                i = stock.hist_data.index.get_loc(miss_factor)
+                                if i == 0:
+                                    logging.warning('%s: cannot fix missing factor' % stock)
+                                else:
+                                    stock.hist_data.factor[i] = stock.hist_data.factor[i-1]
 
                         stock.sanitize()
                         logging.debug('%s: %d days trading data%s' % (

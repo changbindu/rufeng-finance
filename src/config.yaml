@@ -5,7 +5,7 @@ core:
 analyzer:
   min_hist_data:  60 # days
   max_price:      20
-  max_nmc:        100 # yi
+  max_nmc:        200 # yi
   max_mktcap:     400 # yi
   max_pe:         400
   exclude_gem:    false
