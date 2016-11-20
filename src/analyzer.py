@@ -106,15 +106,15 @@ class Analyzer(object):
 
             # 当前走势位置
             if stock.hist_len > 60:
-                min = qfq_data.close[:60].min()
-                hratio = (qfq_data.close[0]-min)/min
+                min_close = qfq_data.close[:60].min()
+                hratio = (qfq_data.close[0]-min_close)/min_close
                 if hratio > self.config_position[0]:
-                    raise BadStockException('current price is higher than 60 days min %.2f %.2f%%' % (min, hratio*100))
-            if stock.hist_len > 420:
-                max = qfq_data.close[:420].max()
-                hratio = (max - qfq_data.close[0]) / qfq_data.close[0]
+                    raise BadStockException('current price is higher than 60 days min %.2f %.2f%%' % (min_close, hratio*100))
+
+                max_close = qfq_data.close[:min(420, stock.hist_len)].max()
+                hratio = (max_close - qfq_data.close[0]) / qfq_data.close[0]
                 if hratio < self.config_position[1]:
-                    raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max, hratio*100))
+                    raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max_close, hratio*100))
 
             logging.debug('%s: good' % stock)
             result.status = 'GOOD'
@@ -126,6 +126,7 @@ class Analyzer(object):
             self.bad_stocks.append(result)
         except Exception as e:
             msg = 'exception occurred: %s' % e
+            logging.warning('%s: %s' % (stock, msg))
             result.status = 'BAD'
             result.log = msg
             self.bad_stocks.append(result)

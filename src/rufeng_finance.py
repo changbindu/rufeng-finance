@@ -111,7 +111,8 @@ class RufengFinance(object):
             logging.warning('not all data successfully picked')
 
     def cmd_list(self, options, cmd_args):
-        self._dm.load_from_db()
+        self._dm.load_from_db(cmd_args if len(cmd_args) else None)
+
         list = []
         for code, stock in self._dm.stocks.items():
             list.append({'code': code, 'name': stock.name, 'price': stock.price,
@@ -156,20 +157,10 @@ class RufengFinance(object):
                 StockPlot().plot_hist(stock, index, options.index_overlay, path)
 
     def cmd_check(self, options, cmd_args):
-        if len(cmd_args) < 1:
-            self._dm.load_from_db()
-            stocks = self._dm.stocks
-        else:
-            stocks = {}
-            for code in cmd_args:
-                stock = self._dm.find_one_stock_from_db(code)
-                if stock is None:
-                    logging.error('unknown stock %s', code)
-                    continue
-                stocks[stock.code] = stock
+        self._dm.load_from_db(cmd_args if len(cmd_args) else None)
 
         good = bad = 0
-        for code, stock in stocks.items():
+        for code, stock in self._dm.stocks.items():
             logging.info('checking %s' % stock)
             if stock.check():
                 logging.info('Good, no error found')
@@ -192,8 +183,8 @@ class RufengFinance(object):
     def cmd_analyze(self, options, cmd_args):
         config = self._config['analyzer']
         logging.info('analyzer config:\n%s' % yaml.dump(config))
-        self._dm.load_from_db()
 
+        self._dm.load_from_db(cmd_args if len(cmd_args) else None)
         if not len(self._dm.stocks):
             logging.error('no stocks found in local database, please run \'download\' command first')
             return
@@ -212,6 +203,9 @@ class RufengFinance(object):
                          'area': stock.area, 'industry': stock.industry
                         })
         df = DataFrame(list)
+        if df.empty:
+            logging.info('no good stocks found')
+            return
 
         logging.info('list of good %d stocks%s:' % (len(analyzer.good_stocks),
                      options.output and ' and save plots to %s' % options.output or ''))

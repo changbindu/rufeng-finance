@@ -162,7 +162,8 @@ class DataManager(object):
             try:
                 self.load_from_db(remove_invalid=False)
             except KeyError as e:
-                logging.warning('%s, drop database' % str(e))
+                logging.warning('%s, please try to drop database' % str(e))
+                return
         else:
             logging.info('force update all stocks, ignore local database')
 
@@ -206,7 +207,7 @@ class DataManager(object):
         self._extract_from_dataframe(df)
 
         logging.info('getting history trading data from tushare')
-        start_from = self._indexes['000001'].hist_last_date
+        start_from = self._indexes['000001'].hist_start_date
         data_full = self._pick_hist_data_and_save(self._stocks, False, start_from, max_num_threads)  # anything that pulling data must before here
 
         self._remove_unavailable_stocks()
@@ -245,20 +246,31 @@ class DataManager(object):
                     stock.__setattr__(col_name, value)
             self._stocks[stock.code] = stock
 
-    def load_from_db(self, remove_invalid=True):
+    def load_from_db(self, stock_codes=None, load_index=True, remove_invalid=True):
         """load stocks from local database only"""
         logging.info('try to load stock data from local database')
         count = 0
-        for stock in self._local_dm.find_stock(show_process=True):
-            self._stocks[stock.code] = stock
-            count += 1
+
+        if stock_codes:
+            for code in stock_codes:
+                stock = self.find_one_stock_from_db(code)
+                if stock is None:
+                    logging.error('unknown stock %s', code)
+                else:
+                    self._stocks[code] = stock
+                    count += 1
+        else:
+            for stock in self._local_dm.find_stock(show_process=True):
+                self._stocks[stock.code] = stock
+                count += 1
         logging.info('loaded %d stocks' % count)
 
-        count = 0
-        for index in self._local_dm.find_index():
-            self._indexes[index.code] = index
-            count += 1
-        logging.info('loaded %d indexes' % count)
+        if load_index:
+            count = 0
+            for index in self._local_dm.find_index():
+                self._indexes[index.code] = index
+                count += 1
+            logging.info('loaded %d indexes' % count)
 
         if remove_invalid:
             self._remove_unavailable_stocks()
@@ -336,7 +348,7 @@ class DataManager(object):
 
                 try:
                     logging.debug('[%d/%d] picking hist data (%s-%s) of %s' % (
-                                total_to_update - squeue.qsize(), total_to_update,
+                                   total_to_update - squeue.qsize(), total_to_update,
                                 start_from, update_to, stock))
                     hist = ts.get_hist_data(stock.symbol if is_index else stock.code,
                                             start=str(start_from), end=str(update_to), ktype='D',
@@ -361,6 +373,14 @@ class DataManager(object):
                             stock.hist_data = stock.hist_data.append(hist.join(fq_factor))
                         else:
                             stock.hist_data = hist.join(fq_factor)
+
+                        # WA: missing factor at 2014-07-08
+                        if not is_index and '2014-07-08' in stock.hist_data.index:
+                            i = stock.hist_data.index.get_loc('2014-07-08')
+                            if i == 0:
+                                logging.warning('%s: cannot fix missing factor' % stock)
+                            else:
+                                stock.hist_data.factor[i] = stock.hist_data.factor[i-1]
 
                         stock.sanitize()
                         logging.debug('%s: %d days trading data%s' % (
