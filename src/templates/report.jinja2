@@ -5,8 +5,14 @@
     <link rel="stylesheet" href="style.css"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Rufeng-finance Analyzer Report</title>
-</head>
- <script language="javascript">
+    <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="css/select.dataTables.min.css">
+
+	<script type="text/javascript" language="javascript" src="js/jquery.js"></script>
+	<script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/dataTables.select.min.js"></script>
+
+    <script type="text/javascript" language="javascript" class="init">
     function showPic(e, sUrl){
         var x,y;
         x = e.clientX;
@@ -20,7 +26,19 @@
         document.getElementById("candlestick").innerHTML = "";
         document.getElementById("candlestick").style.display = "none";
     }
- </script>
+
+	$(document).ready(function() {
+		$('table.hovertable').DataTable( {
+			"order": [[ 3, "desc" ]],
+            paging: false,
+            select: {
+                style: 'single'
+            }
+		} );
+	} );
+	</script>
+</head>
+
 <!-- CSS goes in the document HEAD or added to your external stylesheet -->
 <style type="text/css">
 table.hovertable {
@@ -56,7 +74,7 @@ table.hovertable td {
 <div>Analyzer configuration:<br> {{ config }}</div>
 <div id="good_stocks">
     <h3>List of {{ good_stocks|length }} Good stocks:</h3>
-    <table border="1" class="hovertable">
+    <table id="good_stocks" border="1" class="hovertable">
     <thead>
     <tr style="text-align: right;">
         <th></th>
@@ -64,8 +82,8 @@ table.hovertable td {
         <th>name</th>
         <th>price</th>
         <th>pe</th>
-        <th>nmc</th>
-        <th>mktcap</th>
+        <th>nmc(亿)</th>
+        <th>mktcap(亿)</th>
         <th>toavgd5</th>
         <th>toavgd30</th>
         <th>area</th>
@@ -81,8 +99,8 @@ table.hovertable td {
         <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
         <td>{{ result.stock.price }}</td>
         <td>{{ result.stock.pe }}</td>
-        <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}亿</td>
-        <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}亿</td>
+        <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}</td>
+        <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}</td>
         <td>{{ result.stock.get_turnover_avg(5)|round(2) }}%</td>
         <td>{{ result.stock.get_turnover_avg(30)|round(2) }}%</td>
         <td>{{ result.stock.area }}</td>
@@ -97,7 +115,7 @@ table.hovertable td {
 
 <div id="bad_stocks">
     <h3 style="color: red">List of {{ bad_stocks|length }} Bad stocks:</h3>
-    <table border="1" class="hovertable">
+    <table id="bad_stocks" border="1" class="hovertable">
     <thead>
     <tr style="text-align: right;">
         <th></th>
@@ -105,8 +123,8 @@ table.hovertable td {
         <th>name</th>
         <th>price</th>
         <th>pe</th>
-        <th>nmc</th>
-        <th>mktcap</th>
+        <th>nmc(亿)</th>
+        <th>mktcap(亿)</th>
         <th>toavgd5</th>
         <th>toavgd30</th>
         <th>area</th>
@@ -123,8 +141,8 @@ table.hovertable td {
         <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
         <td>{{ result.stock.price }}</td>
         <td>{{ result.stock.pe }}</td>
-        <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}亿</td>
-        <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}亿</td>
+        <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}</td>
+        <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}</td>
         <td>{{ result.stock.get_turnover_avg(5)|round(2) }}%</td>
         <td>{{ result.stock.get_turnover_avg(30)|round(2) }}%</td>
         <td>{{ result.stock.area }}</td>

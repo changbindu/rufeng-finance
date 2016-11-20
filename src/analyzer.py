@@ -3,6 +3,7 @@ __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 
 import os
 import math
+import shutil
 import logging
 import datetime
 from threadpool import ThreadPool, makeRequests
@@ -148,6 +149,17 @@ class Analyzer(object):
         with open(os.path.join(out_dir, 'index.html'), "w+") as f:
             f.write(output)
 
+        # copy resources
+        css_dir = os.path.join(out_dir, 'css')
+        js_dir = os.path.join(out_dir, 'js')
+        if os.path.exists(css_dir):
+            shutil.rmtree(css_dir)
+        if os.path.exists(js_dir):
+            shutil.rmtree(js_dir)
+        shutil.copytree(os.path.join('templates', 'css'), css_dir)
+        shutil.copytree(os.path.join('templates', 'js'), js_dir)
+
+        # plot history
         img_dir = os.path.join(out_dir, 'images')
         os.makedirs(img_dir, exist_ok=True)
 
