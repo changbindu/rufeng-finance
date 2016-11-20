@@ -17,6 +17,7 @@ class Result(object):
         self.stock = stock
         self.log = ''
         self.status = 'NAN'
+        self.exception = None
 
 
 class Analyzer(object):
@@ -28,6 +29,7 @@ class Analyzer(object):
         self.good_stocks = []
         self.bad_stocks = []
 
+        self._config = config
         self.config_min_hist_data = max(config['min_hist_data'], 10)
         self.config_max_price = config['max_price']
         self.config_max_nmc = config['max_nmc']
@@ -129,6 +131,7 @@ class Analyzer(object):
             logging.warning('%s: %s' % (stock, msg))
             result.status = 'BAD'
             result.log = msg
+            result.exception = e
             self.bad_stocks.append(result)
         finally:
             pass
@@ -137,6 +140,7 @@ class Analyzer(object):
         env = Environment(loader=FileSystemLoader('templates'))
         template = env.get_template('report.jinja2')
         output = template.render({
+                    'config': self._config,
                     'good_stocks': self.good_stocks,
                     'bad_stocks': self.bad_stocks,
                     'global_status': self.global_status,

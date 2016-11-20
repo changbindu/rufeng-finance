@@ -51,9 +51,10 @@ table.hovertable td {
 }
 </style>
 <body>
+<h2 style="text-align:center">Analyzing Report of Rufeng-finace</h2>
+<div class="text" style=" text-align:center;">{{ date }}</div>
+<div>Analyzer configuration:<br> {{ config }}</div>
 <div id="good_stocks">
-    <h2 style="text-align:center">Analyzing Report of Rufeng-finace</h2>
-    <div class="text" style=" text-align:center;">{{ date }}</div>
     <h3>List of {{ good_stocks|length }} Good stocks:</h3>
     <table border="1" class="hovertable">
     <thead>
@@ -65,6 +66,8 @@ table.hovertable td {
         <th>pe</th>
         <th>nmc</th>
         <th>mktcap</th>
+        <th>toavgd5</th>
+        <th>toavgd30</th>
         <th>area</th>
         <th>industry</th>
         <th>status</th>
@@ -80,6 +83,8 @@ table.hovertable td {
         <td>{{ result.stock.pe }}</td>
         <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}亿</td>
         <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}亿</td>
+        <td>{{ result.stock.get_turnover_avg(5)|round(2) }}%</td>
+        <td>{{ result.stock.get_turnover_avg(30)|round(2) }}%</td>
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
@@ -102,6 +107,8 @@ table.hovertable td {
         <th>pe</th>
         <th>nmc</th>
         <th>mktcap</th>
+        <th>toavgd5</th>
+        <th>toavgd30</th>
         <th>area</th>
         <th>industry</th>
         <th>status</th>
@@ -118,6 +125,8 @@ table.hovertable td {
         <td>{{ result.stock.pe }}</td>
         <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}亿</td>
         <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}亿</td>
+        <td>{{ result.stock.get_turnover_avg(5)|round(2) }}%</td>
+        <td>{{ result.stock.get_turnover_avg(30)|round(2) }}%</td>
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
@@ -130,6 +139,6 @@ table.hovertable td {
 
 <div id="footer">
     Powered by rufeng-finace
-    &copy; Copyright 2016 by Du, Changbin <pre><changbin.du@hotmail.com></pre>.
+    &copy; Copyright 2016 by Du, Changbin. Contact: <a href="Mailto:changbin.du@hotmail.com">changbin.du@gmail.com</a>.
 </div>
 </body>
