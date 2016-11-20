@@ -26,14 +26,17 @@ _rufeng_finance()
         options="$options"
         ;;
     "plot")
-        options="-o --qfq -i --index-overlay $options"
+        options="-o --output --qfq -i --index-overlay $options"
         ;;
     "analyze")
-        options="-t --threads= -o --plot-all $options"
+        options="-t --threads= -o --output --plot-all $options"
         ;;
     "monitor")
         options="$options"
         ;;
+    "-o" | "--output")
+        _filedir -d
+        return
     esac
     COMPREPLY=( $( compgen -W '$options' -- "$cur" ) )
 } &&
