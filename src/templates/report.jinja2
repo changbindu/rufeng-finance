@@ -7,10 +7,18 @@
     <title>Rufeng-finance Analyzer Report</title>
     <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
     <link rel="stylesheet" type="text/css" href="css/select.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="css/buttons.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="css/rowReorder.dataTables.min.css">
 
-	<script type="text/javascript" language="javascript" src="js/jquery.js"></script>
-	<script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" language="javascript" src="js/dataTables.select.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jszip.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/pdfmake.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/vfs_fonts.js"></script>
+    <script type="text/javascript" language="javascript" src="js/buttons.html5.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/dataTables.rowReorder.min.js"></script>
 
     <script type="text/javascript" language="javascript" class="init">
     function showPic(e, sUrl){
@@ -29,11 +37,27 @@
 
 	$(document).ready(function() {
 		$('table.hovertable').DataTable( {
-			"order": [[ 0, "asc" ]],
-            paging: false,
+			paging: false,
+            ordering: true,
+            order: [[ 0, "asc" ]],
             select: {
-                style: 'single'
-            }
+                style: 'multi+shift',
+                selector: 'td:last-child',
+            },
+            dom: 'Bfrtip',
+            buttons: [
+              'copyHtml5',
+              'excelHtml5',
+              {
+                extend: 'pdfHtml5',
+                orientation: 'landscape',
+                pageSize: 'LEGAL'
+              }
+            ],
+            rowReorder: true,
+            rowReorder: {
+              selector: 'th.seq'
+            },
 		} );
 	} );
 	</script>
@@ -89,12 +113,13 @@ table.hovertable td {
         <th>area</th>
         <th>industry</th>
         <th>status</th>
+        <th></th>
     </tr>
     </thead>
     <tbody>
     {% for result in good_stocks %}
     <tr>
-        <th>{{ loop.index }}</th>
+        <th class='seq'>{{ loop.index }}</th>
         <td><a href="images/{{ result.stock.code }}.png" target="_blank" onmouseout="hiddenPic();" onmousemove="showPic(event,'images/{{ result.stock.code }}.png');">{{ result.stock.code }}</a></td>
         <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
         <td>{{ result.stock.price }}</td>
@@ -106,6 +131,7 @@ table.hovertable td {
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
+        <td class="select-checkbox"></td>
     </tr>
     {% endfor %}
     </tbody>
@@ -136,7 +162,7 @@ table.hovertable td {
     <tbody>
     {% for result in bad_stocks %}
     <tr>
-        <th>{{ loop.index }}</th>
+        <th class='seq'>{{ loop.index }}</th>
         <td><a href="images/{{ result.stock.code }}.png" target="_blank" onmouseout="hiddenPic();" onmousemove="showPic(event,'images/{{ result.stock.code }}.png');">{{ result.stock.code }}</a></td>
         <td><a href="http://stockpage.10jqka.com.cn/{{ result.stock.code }}/" target="_blank">{{ result.stock.name }}</a></td>
         <td>{{ result.stock.price }}</td>

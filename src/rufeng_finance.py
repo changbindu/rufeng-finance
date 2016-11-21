@@ -112,6 +112,9 @@ class RufengFinance(object):
 
     def cmd_list(self, options, cmd_args):
         self._dm.load_from_db(cmd_args if len(cmd_args) else None)
+        if not len(self._dm.stocks):
+            logging.info('no stocks found')
+            return
 
         list = []
         for code, stock in self._dm.stocks.items():
