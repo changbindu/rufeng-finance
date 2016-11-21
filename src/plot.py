@@ -43,7 +43,8 @@ class StockPlot(object):
             if i != 0 and round(factor, 2) != round(stock_data.factor[i-1], 2):
                 ax_price.annotate('Q(f=%.3f)' % factor,
                     xy=(i, stock_data.open[i]), xycoords='data',
-                    xytext=(0, stock_data.high.max()/10), textcoords='offset points',
+                    xytext=(0, stock_data.high.max()/10), textcoords='offset points', ha='center', va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.2', fc='blue', alpha=0.3),
                     arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"),
                     fontsize=10, color='c')
 
