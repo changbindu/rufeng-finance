@@ -113,6 +113,7 @@ table.hovertable td {
         <th>area</th>
         <th>industry</th>
         <th>status</th>
+        <th>score</th>
         <th></th>
     </tr>
     </thead>
@@ -131,6 +132,18 @@ table.hovertable td {
         <td>{{ result.stock.area }}</td>
         <td>{{ result.stock.industry }}</td>
         <td>{{ result.status }}</td>
+        <td><select size="1" id="row-{{ loop.index }}-score" name="row-{{ loop.index }}-score">
+                    <option value="1" >1 </option>
+                    <option value="2" >2 </option>
+                    <option value="3"> 3 </option>
+                    <option value="4"> 4 </option>
+                    <option value="5" selected="selected"> 5 </option>
+                    <option value="6"> 6 </option>
+                    <option value="7"> 7 </option>
+                    <option value="8"> 8 </option>
+                    <option value="9"> 9 </option>
+                    <option value="10"> 10 </option>
+        </select></td>
         <td class="select-checkbox"></td>
     </tr>
     {% endfor %}
