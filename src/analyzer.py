@@ -40,6 +40,7 @@ class Analyzer(object):
         self.config_exclude_suspension = config['exclude_suspension']
         self.config_exclude_st = config['exclude_st']
         self.config_min_d5_turnover_avg = config['min_d5_turnover_avg']
+        self.config_min_d90_change = config['min_d90_change']
         self.config_position = config['position']
 
     def analyze(self, threads=1):
@@ -108,7 +109,7 @@ class Analyzer(object):
             qfq_data = stock.qfq_data
 
             # 当前走势位置
-            if stock.hist_len > 60:
+            if stock.hist_len >= 60:
                 min_close = qfq_data.close[:60].min()
                 hratio = (qfq_data.close[0]-min_close)/min_close
                 if hratio > self.config_position[0]:
@@ -118,6 +119,13 @@ class Analyzer(object):
                 hratio = (max_close - qfq_data.close[0]) / qfq_data.close[0]
                 if hratio < self.config_position[1]:
                     raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max_close, hratio*100))
+
+            if stock.hist_len >= 90:
+                min_close = qfq_data.close[:90].min()
+                max_close = qfq_data.close[:90].max()
+                change = (max_close - min_close)/min_close
+                if change < self.config_min_d90_change:
+                    raise BadStockException('90 day amplitude is only %.2f%%' % (change*100))
 
             logging.debug('%s: good' % stock)
             result.status = 'GOOD'

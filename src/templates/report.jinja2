@@ -111,7 +111,7 @@
 <div>Analyzer configuration:<br> {{ config }}</div>
 <div id="good_stocks">
     <h3>List of {{ good_stocks|length }} Good stocks:</h3>
-    <table id="good_stocks" border="1" class="hovertable">
+    <table id="good_stocks_table" border="1" class="hovertable">
         <thead>
         <tr style="text-align: right;">
             <th></th>
@@ -132,7 +132,7 @@
         </thead>
         <tbody>
         {% for result in good_stocks %}
-            <tr>
+            <tr id="{{ result.stock.code }}">
                 <th class='seq'>{{ loop.index }}</th>
                 <td><a href="images/{{ result.stock.code }}.png" target="_blank" onmouseout="hiddenPic();"
                        onmousemove="showPic(event,'images/{{ result.stock.code }}.png');">{{ result.stock.code }}</a>
@@ -141,8 +141,8 @@
                        target="_blank">{{ result.stock.name }}</a></td>
                 <td>{{ result.stock.price }}</td>
                 <td>{{ result.stock.pe }}</td>
-                <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}</td>
-                <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}</td>
+                <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2) }}</td>
+                <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2) }}</td>
                 <td>{{ result.stock.get_turnover_avg(5)|round(2) }}</td>
                 <td>{{ result.stock.get_turnover_avg(30)|round(2) }}</td>
                 <td>{{ result.stock.area }}</td>
@@ -170,7 +170,7 @@
 
 <div id="bad_stocks">
     <h3 style="color: red">List of {{ bad_stocks|length }} Bad stocks:</h3>
-    <table id="bad_stocks" border="1" class="hovertable">
+    <table id="bad_stocks_table" border="1" class="hovertable">
         <thead>
         <tr style="text-align: right;">
             <th></th>
@@ -190,7 +190,7 @@
         </thead>
         <tbody>
         {% for result in bad_stocks %}
-            <tr>
+            <tr id="{{ result.stock.code }}">
                 <th class='seq'>{{ loop.index }}</th>
                 <td><a href="images/{{ result.stock.code }}.png" target="_blank" onmouseout="hiddenPic();"
                        onmousemove="showPic(event,'images/{{ result.stock.code }}.png');">{{ result.stock.code }}</a>
@@ -199,8 +199,8 @@
                        target="_blank">{{ result.stock.name }}</a></td>
                 <td>{{ result.stock.price }}</td>
                 <td>{{ result.stock.pe }}</td>
-                <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2, 'common') }}</td>
-                <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2, 'common') }}</td>
+                <td>{{ (result.stock.nmc/10000 if result.stock.nmc is not none else 0.0)|round(2) }}</td>
+                <td>{{ (result.stock.mktcap/10000 if result.stock.mktcap is not none else 0.0)|round(2) }}</td>
                 <td>{{ result.stock.get_turnover_avg(5)|round(2) }}</td>
                 <td>{{ result.stock.get_turnover_avg(30)|round(2) }}</td>
                 <td>{{ result.stock.area }}</td>
