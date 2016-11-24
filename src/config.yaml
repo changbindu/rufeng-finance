@@ -4,17 +4,17 @@ core:
 
 analyzer:
   min_hist_data:  60 # days
-  max_price:      20
+  max_price:      25
   max_nmc:        200 # yi
   max_mktcap:     400 # yi
-  max_pe:         400
+  max_pe:         500
   exclude_gem:    false
-  exclude_suspension: true
+  exclude_suspension: false
   exclude_st:     true
-  min_d5_turnover_avg: 3.0
+  min_d5_turnover_avg: 5.0
   min_d90_change: 0.30
   position:
-    -             0.6
+    -             0.7
     -             1.0
 
 monitor:

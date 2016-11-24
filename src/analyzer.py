@@ -72,7 +72,7 @@ class Analyzer(object):
                 raise BadStockException('in Growth Enterprise Market')
 
             # 停牌
-            if self.config_exclude_suspension and math.isnan(stock.price):
+            if self.config_exclude_suspension and (math.isnan(stock.price) or stock.price == 0.0):
                 raise BadStockException('suspending')
 
             # ST
@@ -158,14 +158,18 @@ class Analyzer(object):
             f.write(output)
 
         # copy resources
-        css_dir = os.path.join(out_dir, 'css')
-        js_dir = os.path.join(out_dir, 'js')
-        if os.path.exists(css_dir):
-            shutil.rmtree(css_dir)
-        if os.path.exists(js_dir):
-            shutil.rmtree(js_dir)
-        shutil.copytree(os.path.join('templates', 'css'), css_dir)
-        shutil.copytree(os.path.join('templates', 'js'), js_dir)
+        def _copy_res(src):
+            dest = os.path.join(out_dir, os.path.basename(src))
+            if not os.path.exists(dest):
+                os.makedirs(dest, exist_ok=True)
+            src_files = os.listdir(src)
+            for file_name in src_files:
+                full_file_name = os.path.join(src, file_name)
+                if (os.path.isfile(full_file_name)):
+                    shutil.copy(full_file_name, dest)
+        _copy_res('templates/css')
+        _copy_res('templates/js')
+        _copy_res('templates/images')
 
         # plot history
         img_dir = os.path.join(out_dir, 'images')

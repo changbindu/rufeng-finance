@@ -203,6 +203,7 @@ class RufengFinance(object):
             stock = result.stock
             list.append({'code': stock.code, 'name': stock.name, 'price': stock.price,
                          'pe': stock.pe, 'nmc': stock.nmc/10000, 'mktcap': stock.mktcap/10000,
+                         'toavgd5': '%.2f%%'%stock.get_turnover_avg(5), 'toavgd30': '%.2f%%'%stock.get_turnover_avg(30),
                          'area': stock.area, 'industry': stock.industry
                         })
         df = DataFrame(list)
@@ -212,7 +213,7 @@ class RufengFinance(object):
 
         logging.info('list of good %d stocks%s:' % (len(analyzer.good_stocks),
                      options.output and ' and save plots to %s' % options.output or ''))
-        print(df.to_string(columns=('code', 'name', 'price', 'pe', 'nmc', 'mktcap', 'area', 'industry')))
+        print(df.to_string(columns=('code', 'name', 'price', 'pe', 'nmc', 'mktcap', 'toavgd5', 'toavgd30', 'area', 'industry')))
         logging.info('global market status: %s' % analyzer.global_status)
 
         if options.output:
