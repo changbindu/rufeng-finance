@@ -40,8 +40,10 @@ class Analyzer(object):
         self.config_exclude_suspension = config['exclude_suspension']
         self.config_exclude_st = config['exclude_st']
         self.config_min_d5_turnover_avg = config['min_d5_turnover_avg']
-        self.config_min_d90_change = config['min_d90_change']
+        self.config_min_d90_amp = config['min_d90_amp']
         self.config_position = config['position']
+        self.config_min_d90_change_count = config['min_d90_change_count']
+        self.config_ma = config['ma']
 
     def analyze(self, threads=1):
         self.global_status = 'GOOD' if self._analyze_index() else 'BAD'
@@ -123,9 +125,27 @@ class Analyzer(object):
             if stock.hist_len >= 90:
                 min_close = qfq_data.close[:90].min()
                 max_close = qfq_data.close[:90].max()
-                change = (max_close - min_close)/min_close
-                if change < self.config_min_d90_change:
-                    raise BadStockException('90 day amplitude is only %.2f%%' % (change*100))
+                amp = (max_close - min_close)/min_close
+                if amp < self.config_min_d90_amp:
+                    raise BadStockException('90 day amplitude is only %.2f%%' % (amp*100))
+
+            if stock.hist_len >= 90:
+                count = hist_data[hist_data['p_change'] > self.config_min_d90_change_count[0]].index.size
+                if count < self.config_min_d90_change_count[1]:
+                    raise BadStockException('90 days data only have %d day change percent larger than %.2f%%'
+                                            % (count, self.config_min_d90_change_count[1]))
+
+            if stock.hist_len >= self.config_ma[2]:
+                ma_map = {5: hist_data.ma5, 10:hist_data.ma10, 20:hist_data.ma20,
+                          30:stock.ma30.close, 60:stock.ma60.close, 120:stock.ma120.close
+                         }
+                ma_a = self.config_ma[0]
+                ma_b = self.config_ma[1]
+                if ma_a not in ma_map or ma_b not in ma_map:
+                    raise ValueError('not a valid ma')
+                for i in range(self.config_ma[2]):
+                    if ma_map[ma_a][i] < ma_map[ma_b][i]:
+                        raise BadStockException('ma%d only larger than ma%d for %d days from now' % (ma_a, ma_b, i))
 
             logging.debug('%s: good' % stock)
             result.status = 'GOOD'
