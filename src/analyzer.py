@@ -40,6 +40,7 @@ class Analyzer(object):
         self.config_exclude_suspension = config['exclude_suspension']
         self.config_exclude_st = config['exclude_st']
         self.config_min_d5_turnover_avg = config['min_d5_turnover_avg']
+        self.config_min_d30_turnover_avg = config['min_d30_turnover_avg']
         self.config_min_d90_amp = config['min_d90_amp']
         self.config_position = config['position']
         self.config_min_d90_change_count = config['min_d90_change_count']
@@ -107,6 +108,11 @@ class Analyzer(object):
             if d5_avg < self.config_min_d5_turnover_avg:
                 raise BadStockException('5 days average turnover is too low, %.2f%%' % (d5_avg))
 
+            # 30日平均换手率
+            d30_avg = stock.get_turnover_avg(30)
+            if d30_avg < self.config_min_d30_turnover_avg:
+                raise BadStockException('30 days average turnover is too low, %.2f%%' % (d30_avg))
+
             # delay this until we really need
             qfq_data = stock.qfq_data
 
@@ -122,6 +128,7 @@ class Analyzer(object):
                 if hratio < self.config_position[1]:
                     raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max_close, hratio*100))
 
+            # 90天振幅
             if stock.hist_len >= 90:
                 min_close = qfq_data.close[:90].min()
                 max_close = qfq_data.close[:90].max()
@@ -129,8 +136,10 @@ class Analyzer(object):
                 if amp < self.config_min_d90_amp:
                     raise BadStockException('90 day amplitude is only %.2f%%' % (amp*100))
 
+            # 大涨跌幅交易天数
             if stock.hist_len >= 90:
-                count = hist_data[hist_data['p_change'] > self.config_min_d90_change_count[0]].index.size
+                min_change = self.config_min_d90_change_count[0]
+                count = hist_data[abs(hist_data['p_change']) > min_change].index.size
                 if count < self.config_min_d90_change_count[1]:
                     raise BadStockException('90 days data only have %d day change percent larger than %.2f%%'
                                             % (count, self.config_min_d90_change_count[1]))

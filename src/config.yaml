@@ -12,6 +12,7 @@ analyzer:
   exclude_suspension: false
   exclude_st:     true
   min_d5_turnover_avg: 5.0
+  min_d30_turnover_avg: 2.0
   min_d90_amp:    0.30
   position:
     -             0.7
