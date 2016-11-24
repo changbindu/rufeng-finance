@@ -7,7 +7,7 @@ analyzer:
   max_price:      30
   max_nmc:        200 # yi
   max_mktcap:     400 # yi
-  max_pe:         500
+  max_pe:         500 # .NaN
   exclude_gem:    false
   exclude_suspension: false
   exclude_st:     true
