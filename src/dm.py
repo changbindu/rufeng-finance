@@ -147,9 +147,9 @@ class DataManager(object):
             value = 1
         self._data_period_y = value
 
-    def pick_data(self, max_num_threads = 20, force_update = False):
+    def pick_data(self, max_num_threads = 20):
         """
-        pick all necessary data from local database and from internet. This function will take a while.
+        pick all necessary data from local database and from internet for loaded stocks. This function will take a while.
         """
         logging.info('getting basics from tushare')
         self._init_stock_objs()
@@ -157,15 +157,6 @@ class DataManager(object):
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logging.info('totally there are %d listed companies' % len(self._stocks))
-
-        if not force_update:
-            try:
-                self.load_from_db(remove_invalid=False)
-            except KeyError as e:
-                logging.warning('%s, please try to drop database' % str(e))
-                return
-        else:
-            logging.info('force update all stocks, ignore local database')
 
         # self._pick_hist_data_and_save(max_num_threads)
 
@@ -250,30 +241,35 @@ class DataManager(object):
         """load stocks from local database only"""
         logging.info('try to load stock data from local database')
         count = 0
-
-        if stock_codes:
-            for code in stock_codes:
-                stock = self.find_one_stock_from_db(code)
-                if stock is None:
-                    logging.error('unknown stock %s', code)
-                else:
-                    self._stocks[code] = stock
+        try:
+            if stock_codes:
+                for code in stock_codes:
+                    stock = self.find_one_stock_from_db(code)
+                    if stock is None:
+                        logging.error('unknown stock %s', code)
+                    else:
+                        self._stocks[code] = stock
+                        count += 1
+            else:
+                for stock in self._local_dm.find_stock(show_process=True):
+                    self._stocks[stock.code] = stock
                     count += 1
-        else:
-            for stock in self._local_dm.find_stock(show_process=True):
-                self._stocks[stock.code] = stock
-                count += 1
-        logging.info('loaded %d stocks' % count)
+            logging.info('loaded %d stocks' % count)
 
-        if load_index:
-            count = 0
-            for index in self._local_dm.find_index():
-                self._indexes[index.code] = index
-                count += 1
-            logging.info('loaded %d indexes' % count)
-
+            if load_index:
+                count = 0
+                for index in self._local_dm.find_index():
+                    self._indexes[index.code] = index
+                    count += 1
+                logging.info('loaded %d indexes' % count)
+        except KeyError as e:
+            logging.warning('%s, please try to drop database' % str(e))
+            return
         if remove_invalid:
             self._remove_unavailable_stocks()
+
+    def invalid_loaded_stocks(self):
+        self._stocks = {}
 
     def _extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
         if df is None or not isinstance(df, DataFrame):
