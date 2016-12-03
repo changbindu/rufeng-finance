@@ -151,8 +151,9 @@ class DataManager(object):
         """
         pick all necessary data from local database and from internet for loaded stocks. This function will take a while.
         """
-        logging.info('getting basics from tushare')
-        self._init_stock_objs()
+        if not len(self._stocks):
+            logging.info('getting basics from tushare')
+            self._init_stock_objs()
 
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
@@ -237,31 +238,21 @@ class DataManager(object):
                     stock.__setattr__(col_name, value)
             self._stocks[stock.code] = stock
 
-    def load_from_db(self, stock_codes=None, load_index=True, remove_invalid=True):
+    def load_from_db(self, remove_invalid=True):
         """load stocks from local database only"""
         logging.info('try to load stock data from local database')
         count = 0
         try:
-            if stock_codes:
-                for code in stock_codes:
-                    stock = self.find_one_stock_from_db(code)
-                    if stock is None:
-                        logging.error('unknown stock %s', code)
-                    else:
-                        self._stocks[code] = stock
-                        count += 1
-            else:
-                for stock in self._local_dm.find_stock(show_process=True):
-                    self._stocks[stock.code] = stock
-                    count += 1
+            for stock in self._local_dm.find_stock(show_process=True):
+                self._stocks[stock.code] = stock
+                count += 1
             logging.info('loaded %d stocks' % count)
 
-            if load_index:
-                count = 0
-                for index in self._local_dm.find_index():
-                    self._indexes[index.code] = index
-                    count += 1
-                logging.info('loaded %d indexes' % count)
+            count = 0
+            for index in self._local_dm.find_index():
+                self._indexes[index.code] = index
+                count += 1
+            logging.info('loaded %d indexes' % count)
         except KeyError as e:
             logging.warning('%s, please try to drop database' % str(e))
             return
@@ -310,9 +301,10 @@ class DataManager(object):
             logging.warning('removed unavailable stock %s (maybe not IPO yet)' % stock)
 
     def _get_indexes(self):
-        for k, v in Index.index_name_map.items():
-                index = Index(code=k, symbol=v[0], name=v[1])
-                self._indexes[index.code] = index
+        if not len(self._indexes):
+            for k, v in Index.index_name_map.items():
+                    index = Index(code=k, symbol=v[0], name=v[1])
+                    self._indexes[index.code] = index
 
         logging.info('get all hist data of indexes')
         start_from = datetime.date.today() - datetime.timedelta(days=365 * self._data_period_y)

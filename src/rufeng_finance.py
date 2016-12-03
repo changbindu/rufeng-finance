@@ -63,7 +63,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if self.loaded and len(self._dm.stocks):
             print('already loaded')
         else:
-            self._dm.load_from_db(None)
+            self._dm.load_from_db()
             self.loaded = True
 
     def do_download(self, args_str):
