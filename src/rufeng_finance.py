@@ -25,7 +25,8 @@ import util
 
 class RufengFinanceCommandLine(cmd.Cmd):
     prompt = '(Analyzer) '
-    intro = "A finance ayalyzer of python."
+    intro = 'A finance ayalyzer of python.\n' \
+            'Copyright © 2016 Changbin Du <changbin.du@gmail.com>. All rights reserved.'
 
     def __init__(self, *args, **kwargs):
         self._dm = DataManager()
@@ -65,6 +66,9 @@ class RufengFinanceCommandLine(cmd.Cmd):
         else:
             self._dm.load_from_db()
             self.loaded = True
+
+    def help_load(self):
+        print('\n'.join(['load data from local database to memory',]))
 
     def do_download(self, args_str):
         parser = self._get_arg_parser()
@@ -319,6 +323,12 @@ class RufengFinanceCommandLine(cmd.Cmd):
 
     def help_analyze(self):
         print('\n'.join(['analyze our stocks using local data',]))
+
+    def do_edit(self, args_str=None):
+        os.system('vim ' + (args_str if args_str else 'config.yaml'))
+
+    def help_edit(self):
+        print('\n'.join(['edit config file using vim', ]))
 
     def do_monitor(self, args_str):
         parser = self._get_arg_parser()

@@ -171,7 +171,7 @@ class DataManager(object):
                     remap={'trade': 'price', 'per': 'pe'})
 
         # calculate the report quarter
-        report_date = datetime.date.today() - datetime.timedelta(days=60)
+        report_date = datetime.date.today() - datetime.timedelta(days=90)
         report_quarter = math.ceil(report_date.month/3.0)
 
         logging.info('getting last report (%d quarter %d) from tushare' % (report_date.year, report_quarter))
