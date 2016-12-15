@@ -16,12 +16,23 @@ analyzing:
         exclude_gem:    false
         exclude_suspension: false
         exclude_st:     true
-        min_d5_turnover_avg: 5.0
-        min_d30_turnover_avg: 2.0
-        min_d90_amp:    0.30
-        position: [0.7, 1.0]
-        min_d90_change_count: [7, 3]
-        ma: [5, 10, 10]
+        min_turnover_avg: [[5, 5.0], [30, 2.0]]
+        amp_scope:        [[90, 0.3, .NaN]]
+        position:         [[60, 0.7], [420, 1.0]]
+        min_change_count: [[90, 7, 3]]
+        ma:               [[5, 10, 10]]
+    Opportunity:
+      desc: 'find opportunity policy'
+      config:
+        min_hist_data:  90 # days
+        max_price:      40
+        max_nmc:        200 # yi
+        max_mktcap:     400 # yi
+        exclude_gem:    false
+        exclude_suspension: true
+        exclude_st:         true
+        raise_drop_scope:   [[30, -1.0, -0.50]]
+        position:           [[60, 0.7], [420, 1.0]]
 
 
 monitor:

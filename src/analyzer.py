@@ -108,19 +108,17 @@ class Analyzer(object):
                 if stock.pe is not None and stock.pe > config_max_pe:
                     raise BadStockException('PE is too high, %d' % (stock.pe))
 
-            # 5日平均换手率
-            config_min_d5_turnover_avg = get_config('min_d5_turnover_avg')
-            if config_min_d5_turnover_avg is not None:
-                d5_avg = stock.get_turnover_avg(5)
-                if d5_avg < config_min_d5_turnover_avg:
-                    raise BadStockException('5 days average turnover is too low, %.2f%%' % (d5_avg))
-
-            # 30日平均换手率
-            config_min_d30_turnover_avg = get_config('min_d30_turnover_avg')
-            if config_min_d30_turnover_avg is not None:
-                d30_avg = stock.get_turnover_avg(30)
-                if d30_avg < config_min_d30_turnover_avg:
-                    raise BadStockException('30 days average turnover is too low, %.2f%%' % (d30_avg))
+            # 平均换手率
+            config_min_turnover_avg = get_config('min_turnover_avg')
+            if config_min_turnover_avg is not None:
+                for item in config_min_turnover_avg:
+                    days = item[0]
+                    min_avg = item[1]
+                    if days > stock.hist_len:
+                        continue
+                    avg = stock.get_turnover_avg(days)
+                    if avg < min_avg:
+                        raise BadStockException('%d days average turnover is too low, %.2f%% < %.2f%%' % (days, avg, min_avg))
 
             # delay this until we really need
             qfq_data = stock.qfq_data
@@ -128,48 +126,80 @@ class Analyzer(object):
             # 当前走势位置
             config_position = get_config('position')
             if config_position is not None:
-                if stock.hist_len >= 60:
-                    min_close = qfq_data.close[:60].min()
+                days = config_position[0][0]
+                ratio = config_position[0][1]
+                if stock.hist_len >= days:
+                    min_close = qfq_data.close[:days].min()
                     hratio = (qfq_data.close[0]-min_close)/min_close
-                    if hratio > config_position[0]:
-                        raise BadStockException('current price is higher than 60 days min %.2f %.2f%%' % (min_close, hratio*100))
-
-                    max_close = qfq_data.close[:min(420, stock.hist_len)].max()
+                    if hratio > ratio:
+                        raise BadStockException('current price is higher than %d days min %.2f %.2f%%' % (days, min_close, hratio*100))
+                days = config_position[1][0]
+                ratio = config_position[1][1]
+                if stock.hist_len >= days:
+                    max_close = qfq_data.close[:min(days, stock.hist_len)].max()
                     hratio = (max_close - qfq_data.close[0]) / qfq_data.close[0]
-                    if hratio < config_position[1]:
-                        raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max_close, hratio*100))
+                    if hratio < ratio:
+                        raise BadStockException('%d days max %.2f is only higher than current %.2f%%' % (days, max_close, hratio*100))
 
-            # 90天振幅
-            config_min_d90_amp = get_config('min_d90_amp')
-            if config_min_d90_amp is not None:
-                if stock.hist_len >= 90:
-                    min_close = qfq_data.close[:90].min()
-                    max_close = qfq_data.close[:90].max()
+            # 周期振幅
+            config_amp_scope = get_config('amp_scope')
+            if config_amp_scope is not None:
+                for item in config_amp_scope:
+                    days = item[0]
+                    low = item[1]
+                    high = item[2]
+                    if days > stock.hist_len:
+                        continue
+                    min_close = qfq_data.close[:days].min()
+                    max_close = qfq_data.close[:days].max()
                     amp = (max_close - min_close)/min_close
-                    if amp < config_min_d90_amp:
-                        raise BadStockException('90 day amplitude is only %.2f%%' % (amp*100))
+                    if amp < low or amp > high:
+                        raise BadStockException('%d day amplitude %.2f%% is not in range [%.2f%%, %.2f%%]' %
+                                                (days, amp*100, low*100, high*100))
 
+            # 周期振幅
+            config_raise_drop_scope = get_config('raise_drop_scope')
+            if config_raise_drop_scope is not None:
+                for item in config_raise_drop_scope:
+                    days = item[0]
+                    low = item[1]
+                    high = item[2]
+                    if days > stock.hist_len:
+                        continue
+                    change = (qfq_data.close[0] - qfq_data.close[days]) / qfq_data.close[days]
+                    if change < low or change > high:
+                        raise BadStockException('%d day change percent %.2f%% is not in range [%.2f%%, %.2f%%]' %
+                                                (days, change * 100, low * 100, high * 100))
             # 大涨跌幅交易天数
-            config_min_d90_change_count = get_config('min_d90_change_count')
-            if config_min_d90_change_count is not None:
-                if stock.hist_len >= 90:
-                    min_change = config_min_d90_change_count[0]
-                    count = hist_data[abs(hist_data['p_change']) > min_change].index.size
-                    if count < config_min_d90_change_count[1]:
-                        raise BadStockException('90 days data only have %d day change percent larger than %.2f%%'
-                                                % (count, config_min_d90_change_count[1]))
+            config_min_change_count = get_config('min_change_count')
+            if config_min_change_count is not None:
+                for item in config_min_change_count:
+                    days = item[0]
+                    change = item[1]
+                    min_count = item[2]
+                    if days > stock.hist_len:
+                        continue
+
+                    count = hist_data[:days][abs(hist_data['p_change']) > change].index.size
+                    if count < min_count:
+                        raise BadStockException('%d days data only have %d days change percent larger than %.2f%%'
+                                                % (days, count, change))
 
             config_ma = get_config('ma')
             if config_ma is not None:
-                if stock.hist_len >= config_ma[2]:
+                for item in config_ma:
+                    ma_a = item[0]
+                    ma_b = item[1]
+                    min_count = item[2]
+                    if max(ma_a, ma_b) > stock.hist_len:
+                        continue
+
                     ma_map = {5: hist_data.ma5, 10:hist_data.ma10, 20:hist_data.ma20,
                               30:stock.ma30.close, 60:stock.ma60.close, 120:stock.ma120.close
                              }
-                    ma_a = config_ma[0]
-                    ma_b = config_ma[1]
                     if ma_a not in ma_map or ma_b not in ma_map:
                         raise ValueError('not a valid ma')
-                    for i in range(config_ma[2]):
+                    for i in range(min_count):
                         if ma_map[ma_a][i] < ma_map[ma_b][i]:
                             raise BadStockException('ma%d only larger than ma%d for %d days from now' % (ma_a, ma_b, i))
 

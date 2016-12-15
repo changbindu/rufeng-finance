@@ -68,7 +68,7 @@ def select(options, prompt=None):
         prompt = 'select'
     prompt += ':\n'
     for i, o in enumerate(options):
-        prompt += '%d)%s%s\n' % (i, o, '*' if i ==0 else '')
+        prompt += '%d) %s%s\n' % (i, o, '*' if i ==0 else '')
     while True:
         ans = input(prompt)
         if not ans:
