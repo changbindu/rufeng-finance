@@ -31,20 +31,6 @@ class Analyzer(object):
         self.bad_stocks = []
 
         self._config = config
-        self.config_min_hist_data = max(config['min_hist_data'], 10)
-        self.config_max_price = config['max_price']
-        self.config_max_nmc = config['max_nmc']
-        self.config_max_mktcap = config['max_mktcap']
-        self.config_max_pe = config['max_pe']
-        self.config_exclude_gem = config['exclude_gem']
-        self.config_exclude_suspension = config['exclude_suspension']
-        self.config_exclude_st = config['exclude_st']
-        self.config_min_d5_turnover_avg = config['min_d5_turnover_avg']
-        self.config_min_d30_turnover_avg = config['min_d30_turnover_avg']
-        self.config_min_d90_amp = config['min_d90_amp']
-        self.config_position = config['position']
-        self.config_min_d90_change_count = config['min_d90_change_count']
-        self.config_ma = config['ma']
 
     def analyze(self, threads=1):
         self.global_status = 'GOOD' if self._analyze_index() else 'BAD'
@@ -66,95 +52,126 @@ class Analyzer(object):
         hist_data = stock.hist_data
         result = Result(stock)
 
+        def get_config(name):
+            return self._config[name] if name in self._config else None
+
         class BadStockException(Exception):
             pass
 
         try:
             # 创业板
-            if self.config_exclude_gem and stock.code.startswith('300'):
-                raise BadStockException('in Growth Enterprise Market')
+            config_exclude_gem = get_config('exclude_gem')
+            if config_exclude_gem is not None:
+                if config_exclude_gem and stock.code.startswith('300'):
+                    raise BadStockException('in Growth Enterprise Market')
 
             # 停牌
-            if self.config_exclude_suspension and (math.isnan(stock.price) or stock.price == 0.0):
-                raise BadStockException('suspending')
+            config_exclude_suspension = get_config('exclude_suspension')
+            if config_exclude_suspension is not None:
+                if config_exclude_suspension and (math.isnan(stock.price) or stock.price == 0.0):
+                    raise BadStockException('suspending')
 
             # ST
-            if self.config_exclude_st:
+            config_exclude_st = get_config('exclude_st')
+            if config_exclude_st is not None:
                 for p in Stock.st_prefix:
                     if stock.name.startswith(p):
                         raise BadStockException('Special Treatment (ST)')
 
-            if stock.hist_len < self.config_min_hist_data:
-                raise BadStockException('only %d days history data' % (stock.hist_len))
+            config_min_hist_data = get_config('min_hist_data')
+            if config_min_hist_data is not None:
+                config_min_hist_data = max(config_min_hist_data, 10)
+                if stock.hist_len < config_min_hist_data:
+                    raise BadStockException('only %d days history data' % (stock.hist_len))
 
             # 最新价格
-            if hist_data.close[0] > self.config_max_price:
-                raise BadStockException('price is too high, %d RMB' % (hist_data.close[0]))
+            config_max_price = get_config('max_price')
+            if config_max_price is not None:
+                if hist_data.close[0] > config_max_price:
+                    raise BadStockException('price is too high, %d RMB' % (hist_data.close[0]))
 
             # 流通市值
-            if stock.nmc is not None and stock.nmc/10000 > self.config_max_nmc:
-                raise BadStockException('circulated market value is too high, %dY RMB' % (stock.nmc/10000))
+            config_max_nmc = get_config('max_nmc')
+            if config_max_nmc is not None:
+                if stock.nmc is not None and stock.nmc/10000 > config_max_nmc:
+                    raise BadStockException('circulated market value is too high, %dY RMB' % (stock.nmc/10000))
 
             # 总市值
-            if stock.mktcap is not None and stock.mktcap/10000 > self.config_max_mktcap:
-                raise BadStockException('total market cap value is too high, %dY RMB' % (stock.mktcap/10000))
+            config_max_mktcap = get_config('max_mktcap')
+            if config_max_mktcap is not None:
+                if stock.mktcap is not None and stock.mktcap/10000 > config_max_mktcap:
+                    raise BadStockException('total market cap value is too high, %dY RMB' % (stock.mktcap/10000))
 
             # 市盈率
-            if stock.pe is not None and stock.pe > self.config_max_pe:
-                raise BadStockException('PE is too high, %d' % (stock.pe))
+            config_max_pe = get_config('max_pe')
+            if config_max_pe is not None:
+                if stock.pe is not None and stock.pe > config_max_pe:
+                    raise BadStockException('PE is too high, %d' % (stock.pe))
 
             # 5日平均换手率
-            d5_avg = stock.get_turnover_avg(5)
-            if d5_avg < self.config_min_d5_turnover_avg:
-                raise BadStockException('5 days average turnover is too low, %.2f%%' % (d5_avg))
+            config_min_d5_turnover_avg = get_config('min_d5_turnover_avg')
+            if config_min_d5_turnover_avg is not None:
+                d5_avg = stock.get_turnover_avg(5)
+                if d5_avg < config_min_d5_turnover_avg:
+                    raise BadStockException('5 days average turnover is too low, %.2f%%' % (d5_avg))
 
             # 30日平均换手率
-            d30_avg = stock.get_turnover_avg(30)
-            if d30_avg < self.config_min_d30_turnover_avg:
-                raise BadStockException('30 days average turnover is too low, %.2f%%' % (d30_avg))
+            config_min_d30_turnover_avg = get_config('min_d30_turnover_avg')
+            if config_min_d30_turnover_avg is not None:
+                d30_avg = stock.get_turnover_avg(30)
+                if d30_avg < config_min_d30_turnover_avg:
+                    raise BadStockException('30 days average turnover is too low, %.2f%%' % (d30_avg))
 
             # delay this until we really need
             qfq_data = stock.qfq_data
 
             # 当前走势位置
-            if stock.hist_len >= 60:
-                min_close = qfq_data.close[:60].min()
-                hratio = (qfq_data.close[0]-min_close)/min_close
-                if hratio > self.config_position[0]:
-                    raise BadStockException('current price is higher than 60 days min %.2f %.2f%%' % (min_close, hratio*100))
+            config_position = get_config('position')
+            if config_position is not None:
+                if stock.hist_len >= 60:
+                    min_close = qfq_data.close[:60].min()
+                    hratio = (qfq_data.close[0]-min_close)/min_close
+                    if hratio > config_position[0]:
+                        raise BadStockException('current price is higher than 60 days min %.2f %.2f%%' % (min_close, hratio*100))
 
-                max_close = qfq_data.close[:min(420, stock.hist_len)].max()
-                hratio = (max_close - qfq_data.close[0]) / qfq_data.close[0]
-                if hratio < self.config_position[1]:
-                    raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max_close, hratio*100))
+                    max_close = qfq_data.close[:min(420, stock.hist_len)].max()
+                    hratio = (max_close - qfq_data.close[0]) / qfq_data.close[0]
+                    if hratio < config_position[1]:
+                        raise BadStockException('420 days max %.2f is only higher than current %.2f%%' % (max_close, hratio*100))
 
             # 90天振幅
-            if stock.hist_len >= 90:
-                min_close = qfq_data.close[:90].min()
-                max_close = qfq_data.close[:90].max()
-                amp = (max_close - min_close)/min_close
-                if amp < self.config_min_d90_amp:
-                    raise BadStockException('90 day amplitude is only %.2f%%' % (amp*100))
+            config_min_d90_amp = get_config('min_d90_amp')
+            if config_min_d90_amp is not None:
+                if stock.hist_len >= 90:
+                    min_close = qfq_data.close[:90].min()
+                    max_close = qfq_data.close[:90].max()
+                    amp = (max_close - min_close)/min_close
+                    if amp < config_min_d90_amp:
+                        raise BadStockException('90 day amplitude is only %.2f%%' % (amp*100))
 
             # 大涨跌幅交易天数
-            if stock.hist_len >= 90:
-                min_change = self.config_min_d90_change_count[0]
-                count = hist_data[abs(hist_data['p_change']) > min_change].index.size
-                if count < self.config_min_d90_change_count[1]:
-                    raise BadStockException('90 days data only have %d day change percent larger than %.2f%%'
-                                            % (count, self.config_min_d90_change_count[1]))
+            config_min_d90_change_count = get_config('min_d90_change_count')
+            if config_min_d90_change_count is not None:
+                if stock.hist_len >= 90:
+                    min_change = config_min_d90_change_count[0]
+                    count = hist_data[abs(hist_data['p_change']) > min_change].index.size
+                    if count < config_min_d90_change_count[1]:
+                        raise BadStockException('90 days data only have %d day change percent larger than %.2f%%'
+                                                % (count, config_min_d90_change_count[1]))
 
-            if stock.hist_len >= self.config_ma[2]:
-                ma_map = {5: hist_data.ma5, 10:hist_data.ma10, 20:hist_data.ma20,
-                          30:stock.ma30.close, 60:stock.ma60.close, 120:stock.ma120.close
-                         }
-                ma_a = self.config_ma[0]
-                ma_b = self.config_ma[1]
-                if ma_a not in ma_map or ma_b not in ma_map:
-                    raise ValueError('not a valid ma')
-                for i in range(self.config_ma[2]):
-                    if ma_map[ma_a][i] < ma_map[ma_b][i]:
-                        raise BadStockException('ma%d only larger than ma%d for %d days from now' % (ma_a, ma_b, i))
+            config_ma = get_config('ma')
+            if config_ma is not None:
+                if stock.hist_len >= config_ma[2]:
+                    ma_map = {5: hist_data.ma5, 10:hist_data.ma10, 20:hist_data.ma20,
+                              30:stock.ma30.close, 60:stock.ma60.close, 120:stock.ma120.close
+                             }
+                    ma_a = config_ma[0]
+                    ma_b = config_ma[1]
+                    if ma_a not in ma_map or ma_b not in ma_map:
+                        raise ValueError('not a valid ma')
+                    for i in range(config_ma[2]):
+                        if ma_map[ma_a][i] < ma_map[ma_b][i]:
+                            raise BadStockException('ma%d only larger than ma%d for %d days from now' % (ma_a, ma_b, i))
 
             logging.debug('%s: good' % stock)
             result.status = 'GOOD'

@@ -55,10 +55,26 @@ def confirm(prompt=None, resp=False):
         if not ans:
             return resp
         if ans not in ['y', 'Y', 'n', 'N']:
-            print
-            'please enter y or n.'
+            print('please enter y or n.')
             continue
         if ans == 'y' or ans == 'Y':
             return True
         if ans == 'n' or ans == 'N':
             return False
+
+
+def select(options, prompt=None):
+    if prompt is None:
+        prompt = 'select'
+    prompt += ':\n'
+    for i, o in enumerate(options):
+        prompt += '%d)%s%s\n' % (i, o, '*' if i ==0 else '')
+    while True:
+        ans = input(prompt)
+        if not ans:
+            return 0
+        if not ans.isdigit() or not (0 <= int(ans) < len(options)):
+            print('please enter valid selection')
+            print(int(ans))
+            continue
+        return int(ans)

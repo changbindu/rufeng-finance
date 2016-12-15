@@ -269,7 +269,13 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if not options:
             return
 
-        config = self._config['analyzer']
+        schemes = []
+        user_options = []
+        for k, v in self._config['analyzing']['schemes'].items():
+            schemes.append(v)
+            user_options.append(v['desc'])
+        select = util.select(user_options, 'please select a scheme used for analyzing')
+        config = schemes[select]['config']
         logging.info('analyzer config:\n%s' % yaml.dump(config))
 
         if not self.loaded:

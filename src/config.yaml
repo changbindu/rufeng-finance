@@ -2,28 +2,27 @@ core:
   data_period:    3 # years
   max_threads:    20
 
-analyzer:
-  min_hist_data:  60 # days
-  max_price:      30
-  max_nmc:        200 # yi
-  max_mktcap:     400 # yi
-  max_pe:         500 # .NaN
-  exclude_gem:    false
-  exclude_suspension: false
-  exclude_st:     true
-  min_d5_turnover_avg: 5.0
-  min_d30_turnover_avg: 2.0
-  min_d90_amp:    0.30
-  position:
-    -             0.7
-    -             1.0
-  min_d90_change_count:
-    -             7
-    -             5
-  ma:
-    -             5
-    -             10
-    -             20
+
+analyzing:
+  schemes:
+    Baisc:
+      desc: 'basic configuration'
+      config:
+        min_hist_data:  60 # days
+        max_price:      30
+        max_nmc:        200 # yi
+        max_mktcap:     400 # yi
+        max_pe:         .NaN
+        exclude_gem:    false
+        exclude_suspension: false
+        exclude_st:     true
+        min_d5_turnover_avg: 5.0
+        min_d30_turnover_avg: 2.0
+        min_d90_amp:    0.30
+        position: [0.7, 1.0]
+        min_d90_change_count: [7, 3]
+        ma: [5, 10, 10]
+
 
 monitor:
   '002341':
