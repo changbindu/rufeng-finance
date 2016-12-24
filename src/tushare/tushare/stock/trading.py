@@ -18,6 +18,7 @@ from tushare.stock import cons as ct
 import re
 from pandas.compat import StringIO
 from tushare.util import dateu as du
+from socket import timeout
 try:
     from urllib.request import urlopen, Request, URLError, HTTPError
 except ImportError:
@@ -65,7 +66,7 @@ def get_hist_data(code=None, start=None, end=None,
             lines = urlopen(request, timeout = 10).read()
             if len(lines) < 15: #no data
                 return None
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(pause)
         else:
             js = json.loads(lines.decode('utf-8') if ct.PY3 else lines)
@@ -115,11 +116,10 @@ def _parsing_dayprice_json(pageNum=1, retry_count=3):
             request = Request(ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                          ct.PAGES['jv'], pageNum))
             text = urlopen(request, timeout=10).read()
-        except (URLError, HTTPError) as e:
-            time.sleep(1)
-        else:
             if text == 'null':
                 return None
+            if not text:
+                raise URLError('no data received')
             reg = re.compile(r'\,(.*?)\:')
             text = reg.sub(r',"\1":', text.decode('gbk') if ct.PY3 else text)
             text = text.replace('"{symbol', '{"symbol')
@@ -134,6 +134,8 @@ def _parsing_dayprice_json(pageNum=1, retry_count=3):
             df = df.drop('symbol', axis=1)
             # df = df.ix[df.volume > 0]
             return df
+        except (URLError, HTTPError, timeout, timeout) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -168,7 +170,7 @@ def get_tick_data(code=None, date=None, retry_count=3, pause=0.001):
                 return None
             df = pd.read_table(StringIO(lines), names=ct.TICK_COLUMNS,
                                skiprows=[0])
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(pause)
         else:
             return df
@@ -209,7 +211,7 @@ def get_sina_dd(code=None, date=None, vol=400, retry_count=3, pause=0.001):
                                skiprows=[0])
             if df is not None:
                 df['code'] = df['code'].map(lambda x: x[2:])
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(pause)
         else:
             return df
@@ -243,6 +245,8 @@ def get_today_ticks(code=None, retry_count=3, pause=0.001):
                                                        symbol))
             data_str = urlopen(request, timeout=10).read()
             data_str = data_str.decode('GBK')
+            if not data_str:
+                raise URLError('no data received')
             data_str = data_str[1:-1]
             data_str = eval(data_str, type('Dummy', (dict,),
                                            dict(__getitem__ = lambda s, n:n))())
@@ -254,7 +258,7 @@ def get_today_ticks(code=None, retry_count=3, pause=0.001):
             for pNo in range(1, pages+1):
                 data = data.append(_today_ticks(symbol, date, pNo,
                                                 retry_count, pause), ignore_index=True)
-        except (URLError, HTTPError) as er:
+        except (URLError, HTTPError, timeout) as er:
             time.sleep(pause)
         else:
             return data
@@ -280,7 +284,7 @@ def _today_ticks(symbol, tdate, pageNo, retry_count, pause):
             df = pd.read_html(StringIO(sarr), parse_dates=False)[0]
             df.columns = ct.TODAY_TICK_COLUMNS
             df['pchange'] = df['pchange'].map(lambda x : x.replace('%', ''))
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(pause)
         else:
             return df
@@ -355,10 +359,9 @@ def get_realtime_quotes(symbols=None, retry_count=3):
             request = Request(ct.LIVE_DATA_URL%(ct.P_TYPE['http'], ct.DOMAINS['sinahq'],
                                                         _random(), symbols_list))
             text = urlopen(request,timeout=10).read()
-        except (URLError, HTTPError) as e:
-            time.sleep(1)
-        else:
             text = text.decode('GBK')
+            if not text:
+                raise URLError('no data received')
             reg = re.compile(r'\="(.*?)\";')
             data = reg.findall(text)
             regSym = re.compile(r'(?:sh|sz)(.*?)\=')
@@ -378,6 +381,9 @@ def get_realtime_quotes(symbols=None, retry_count=3):
             for txt in ls:
                 df[txt] = df[txt].map(lambda x : x[:-2])
             return df
+
+        except (URLError, HTTPError, timeout) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -535,9 +541,8 @@ def _parase_fq_factor(code, start, end, retry_count=3):
             request = Request(ct.HIST_FQ_FACTOR_URL%(ct.P_TYPE['http'],
                                                      ct.DOMAINS['vsf'], symbol))
             text = urlopen(request, timeout=10).read()
-        except (URLError, HTTPError) as e:
-            time.sleep(1)
-        else:
+            if not text:
+                raise URLError('no data received')
             text = text[1:len(text)-1]
             text = text.decode('utf-8') if ct.PY3 else text
             text = text.replace('{_', '{"')
@@ -554,6 +559,8 @@ def _parase_fq_factor(code, start, end, retry_count=3):
             df = df.drop_duplicates('date')
             df['factor'] = df['factor'].astype(float)
             return df
+        except (URLError, HTTPError, timeout) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -570,6 +577,8 @@ def _parse_fq_data(url, index, retry_count, pause):
             request = Request(url)
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath('//table[@id=\"FundHoldSharesTable\"]')
             if ct.PY3:
@@ -592,7 +601,7 @@ def _parse_fq_data(url, index, retry_count, pause):
         except ValueError as e:
             # 时间较早，已经读不到数据
             return None
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(pause)
         else:
             return df
@@ -621,10 +630,12 @@ def get_index(retry_count=3):
             request = Request(ct.INDEX_HQ_URL%(ct.P_TYPE['http'],
                                                      ct.DOMAINS['sinahq']))
             text = urlopen(request, timeout=10).read()
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
         else:
             text = text.decode('GBK')
+            if not text:
+                raise URLError('no data received')
             text = text.replace('var hq_str_sh', '').replace('var hq_str_sz', '')
             text = text.replace('";', '').replace('"', '').replace('=', ',')
             text = '%s%s'%(ct.INDEX_HEADER, text)

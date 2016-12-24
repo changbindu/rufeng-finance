@@ -151,9 +151,8 @@ class DataManager(object):
         """
         pick all necessary data from local database and from internet for loaded stocks. This function will take a while.
         """
-        if not len(self._stocks):
-            logging.info('getting basics from tushare')
-            self._init_stock_objs()
+        logging.info('getting basics from tushare')
+        self._init_stock_objs()
 
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
@@ -224,8 +223,9 @@ class DataManager(object):
     def _init_stock_objs(self):
         logging.info('getting stock list from tushare')
         df = ts.get_stock_basics()
+        logging.info('tushare listed %d stocks' % df.index.size)
         for index, row in df.iterrows():
-            stock = Stock(code=index)
+            stock = self._stocks[index] if index in self._stocks else Stock(code=index)
             for col_name in df.columns:
                 # we only trust these data
                 if not col_name in ('name', 'industry', 'area', 'timeToMarket'):
@@ -324,6 +324,9 @@ class DataManager(object):
             else:
                 logging.debug('stock %s already updated at %s' % (stock, stock.last_update.strftime("%Y-%m-%d %H:%M:%S")))
         total_to_update = squeue.qsize()
+        if squeue.empty():
+            logging.info('all are already up to date')
+            return
 
         def __pick_history():
             nonlocal start_from

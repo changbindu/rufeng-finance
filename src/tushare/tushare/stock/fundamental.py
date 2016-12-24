@@ -13,6 +13,7 @@ from lxml import etree
 import re
 import time
 from pandas.compat import StringIO
+from socket import timeout
 try:
     from urllib.request import urlopen, Request, URLError, HTTPError
 except ImportError:
@@ -45,7 +46,7 @@ def get_stock_basics(retry_count=3):
         try:
             request = Request(ct.ALL_STOCK_BASICS_FILE)
             text = urlopen(request, timeout=10).read()
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
         else:
             text = text.decode('GBK')
@@ -99,6 +100,8 @@ def _get_report_data(year, quarter, pageNo, dataArr, retry_count=3):
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath("//table[@class=\"list_table\"]/tr")
             if ct.PY3:
@@ -117,7 +120,7 @@ def _get_report_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_report_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
@@ -164,6 +167,8 @@ def _get_profit_data(year, quarter, pageNo, dataArr, retry_count=3):
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath("//table[@class=\"list_table\"]/tr")
             if ct.PY3:
@@ -181,7 +186,7 @@ def _get_profit_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_profit_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
@@ -227,6 +232,8 @@ def _get_operation_data(year, quarter, pageNo, dataArr, retry_count=3):
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath("//table[@class=\"list_table\"]/tr")
             if ct.PY3:
@@ -244,7 +251,7 @@ def _get_operation_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_operation_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
@@ -290,6 +297,8 @@ def _get_growth_data(year, quarter, pageNo, dataArr, retry_count=3):
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath("//table[@class=\"list_table\"]/tr")
             if ct.PY3:
@@ -307,7 +316,7 @@ def _get_growth_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_growth_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
@@ -352,6 +361,8 @@ def _get_debtpaying_data(year, quarter, pageNo, dataArr, retry_count=3):
                                                       quarter, pageNo, ct.PAGE_NUM[1]))
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath("//table[@class=\"list_table\"]/tr")
             if ct.PY3:
@@ -369,7 +380,7 @@ def _get_debtpaying_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_debtpaying_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
@@ -414,6 +425,8 @@ def _get_cashflow_data(year, quarter, pageNo, dataArr, retry_count=3):
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
+            if not text:
+                raise URLError('no data received')
             html = lxml.html.parse(StringIO(text))
             res = html.xpath("//table[@class=\"list_table\"]/tr")
             if ct.PY3:
@@ -431,7 +444,7 @@ def _get_cashflow_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_cashflow_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except (URLError, HTTPError) as e:
+        except (URLError, HTTPError, timeout) as e:
             time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 

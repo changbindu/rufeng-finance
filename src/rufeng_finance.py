@@ -8,6 +8,7 @@ if sys.version_info < (3, 0):
 sys.path.insert(0, 'tushare')
 
 import os
+import traceback
 import logging.config, coloredlogs
 import argparse
 import multiprocessing
@@ -92,6 +93,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
             data_full = self._dm.pick_data(options.threads)
         except IOError as e:
             print(e)
+            traceback.print_exc()
         else:
             if not data_full:
                 logging.warning('not all data successfully picked')
