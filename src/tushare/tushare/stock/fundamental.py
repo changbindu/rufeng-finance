@@ -1,6 +1,6 @@
-# -*- coding:utf-8 -*- 
+# -*- coding:utf-8 -*-
 """
-基本面数据接口 
+基本面数据接口
 Created on 2015/01/18
 @author: Jimmy Liu
 @group : waditu
@@ -11,11 +11,12 @@ from tushare.stock import cons as ct
 import lxml.html
 from lxml import etree
 import re
+import time
 from pandas.compat import StringIO
 try:
-    from urllib.request import urlopen, Request
+    from urllib.request import urlopen, Request, URLError, HTTPError
 except ImportError:
-    from urllib2 import urlopen, Request
+    from urllib2 import urlopen, Request, URLError, HTTPError
 
 def get_stock_basics(retry_count=3):
     """
@@ -44,8 +45,8 @@ def get_stock_basics(retry_count=3):
         try:
             request = Request(ct.ALL_STOCK_BASICS_FILE)
             text = urlopen(request, timeout=10).read()
-        except Exception as e:
-            pass
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
         else:
             text = text.decode('GBK')
             text = text.replace('--', '')
@@ -63,7 +64,7 @@ def get_report_data(year, quarter, retry_count=3):
     year:int 年度 e.g:2014
     quarter:int 季度 :1、2、3、4，只能输入这4个季度
        说明：由于是从网站获取的数据，需要一页页抓取，速度取决于您当前网络速度
-       
+
     Return
     --------
     DataFrame
@@ -116,8 +117,8 @@ def _get_report_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_report_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except Exception as e:
-            ct._write_msg(e)
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -129,7 +130,7 @@ def get_profit_data(year, quarter, retry_count=3):
     year:int 年度 e.g:2014
     quarter:int 季度 :1、2、3、4，只能输入这4个季度
        说明：由于是从网站获取的数据，需要一页页抓取，速度取决于您当前网络速度
-       
+
     Return
     --------
     DataFrame
@@ -180,8 +181,8 @@ def _get_profit_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_profit_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except Exception as e:
-            ct._write_msg(e)
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -193,7 +194,7 @@ def get_operation_data(year, quarter, retry_count=3):
     year:int 年度 e.g:2014
     quarter:int 季度 :1、2、3、4，只能输入这4个季度
        说明：由于是从网站获取的数据，需要一页页抓取，速度取决于您当前网络速度
-       
+
     Return
     --------
     DataFrame
@@ -243,8 +244,8 @@ def _get_operation_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_operation_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except Exception as e:
-            ct._write_msg(e)
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -256,7 +257,7 @@ def get_growth_data(year, quarter, retry_count=3):
     year:int 年度 e.g:2014
     quarter:int 季度 :1、2、3、4，只能输入这4个季度
        说明：由于是从网站获取的数据，需要一页页抓取，速度取决于您当前网络速度
-       
+
     Return
     --------
     DataFrame
@@ -306,8 +307,8 @@ def _get_growth_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_growth_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except Exception as e:
-            ct._write_msg(e)
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -319,7 +320,7 @@ def get_debtpaying_data(year, quarter, retry_count=3):
     year:int 年度 e.g:2014
     quarter:int 季度 :1、2、3、4，只能输入这4个季度
        说明：由于是从网站获取的数据，需要一页页抓取，速度取决于您当前网络速度
-       
+
     Return
     --------
     DataFrame
@@ -368,11 +369,11 @@ def _get_debtpaying_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_debtpaying_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except Exception as e:
-            ct._write_msg(e)
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
- 
- 
+
+
 def get_cashflow_data(year, quarter, retry_count=3):
     """
         获取现金流量数据
@@ -381,7 +382,7 @@ def get_cashflow_data(year, quarter, retry_count=3):
     year:int 年度 e.g:2014
     quarter:int 季度 :1、2、3、4，只能输入这4个季度
        说明：由于是从网站获取的数据，需要一页页抓取，速度取决于您当前网络速度
-       
+
     Return
     --------
     DataFrame
@@ -430,15 +431,15 @@ def _get_cashflow_data(year, quarter, pageNo, dataArr, retry_count=3):
                 return _get_cashflow_data(year, quarter, pageNo, dataArr)
             else:
                 return dataArr
-        except Exception as e:
-            ct._write_msg(e)
+        except (URLError, HTTPError) as e:
+            time.sleep(1)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
 def _data_path():
     import os
     import inspect
-    caller_file = inspect.stack()[1][1]  
+    caller_file = inspect.stack()[1][1]
     pardir = os.path.abspath(os.path.join(os.path.dirname(caller_file), os.path.pardir))
     return os.path.abspath(os.path.join(pardir, os.path.pardir))
 
