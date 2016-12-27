@@ -45,9 +45,9 @@ def get_stock_basics(retry_count=3):
     for _ in range(retry_count):
         try:
             request = Request(ct.ALL_STOCK_BASICS_FILE)
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
         else:
             text = text.decode('GBK')
             text = text.replace('--', '')
@@ -97,7 +97,7 @@ def _get_report_data(year, quarter, pageNo, dataArr, retry_count=3):
             ct._write_console()
             request = Request(ct.REPORT_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'], ct.PAGES['fd'],
                              year, quarter, pageNo, ct.PAGE_NUM[1]))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
             if not text:
@@ -121,7 +121,7 @@ def _get_report_data(year, quarter, pageNo, dataArr, retry_count=3):
             else:
                 return dataArr
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -164,7 +164,7 @@ def _get_profit_data(year, quarter, pageNo, dataArr, retry_count=3):
             request = Request(ct.PROFIT_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                   ct.PAGES['fd'], year,
                                                   quarter, pageNo, ct.PAGE_NUM[1]))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
             if not text:
@@ -187,7 +187,7 @@ def _get_profit_data(year, quarter, pageNo, dataArr, retry_count=3):
             else:
                 return dataArr
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -229,7 +229,7 @@ def _get_operation_data(year, quarter, pageNo, dataArr, retry_count=3):
             request = Request(ct.OPERATION_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                      ct.PAGES['fd'], year,
                                                      quarter, pageNo, ct.PAGE_NUM[1]))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
             if not text:
@@ -252,7 +252,7 @@ def _get_operation_data(year, quarter, pageNo, dataArr, retry_count=3):
             else:
                 return dataArr
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -294,7 +294,7 @@ def _get_growth_data(year, quarter, pageNo, dataArr, retry_count=3):
             request = Request(ct.GROWTH_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                   ct.PAGES['fd'], year,
                                                   quarter, pageNo, ct.PAGE_NUM[1]))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
             if not text:
@@ -317,7 +317,7 @@ def _get_growth_data(year, quarter, pageNo, dataArr, retry_count=3):
             else:
                 return dataArr
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -359,7 +359,7 @@ def _get_debtpaying_data(year, quarter, pageNo, dataArr, retry_count=3):
             request = Request(ct.DEBTPAYING_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                       ct.PAGES['fd'], year,
                                                       quarter, pageNo, ct.PAGE_NUM[1]))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             if not text:
                 raise URLError('no data received')
@@ -381,7 +381,7 @@ def _get_debtpaying_data(year, quarter, pageNo, dataArr, retry_count=3):
             else:
                 return dataArr
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -422,7 +422,7 @@ def _get_cashflow_data(year, quarter, pageNo, dataArr, retry_count=3):
             request = Request(ct.CASHFLOW_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                     ct.PAGES['fd'], year,
                                                     quarter, pageNo, ct.PAGE_NUM[1]))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             text = text.replace('--', '')
             if not text:
@@ -445,7 +445,7 @@ def _get_cashflow_data(year, quarter, pageNo, dataArr, retry_count=3):
             else:
                 return dataArr
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 

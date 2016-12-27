@@ -115,7 +115,7 @@ def _parsing_dayprice_json(pageNum=1, retry_count=3):
             ct._write_console()
             request = Request(ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                          ct.PAGES['jv'], pageNum))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             if text == 'null':
                 return None
             if not text:
@@ -135,7 +135,7 @@ def _parsing_dayprice_json(pageNum=1, retry_count=3):
             # df = df.ix[df.volume > 0]
             return df
         except (URLError, HTTPError, timeout, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -164,7 +164,7 @@ def get_tick_data(code=None, date=None, retry_count=3, pause=0.001):
         try:
             re = Request(ct.TICK_PRICE_URL % (ct.P_TYPE['http'], ct.DOMAINS['sf'], ct.PAGES['dl'],
                                 date, symbol))
-            lines = urlopen(re, timeout=10).read()
+            lines = urlopen(re, timeout=ct.DEFAULT_TIMEOUT).read()
             lines = lines.decode('GBK')
             if len(lines) < 20:
                 return None
@@ -203,7 +203,7 @@ def get_sina_dd(code=None, date=None, vol=400, retry_count=3, pause=0.001):
         try:
             re = Request(ct.SINA_DD % (ct.P_TYPE['http'], ct.DOMAINS['vsf'], ct.PAGES['sinadd'],
                                 symbol, vol, date))
-            lines = urlopen(re, timeout=10).read()
+            lines = urlopen(re, timeout=ct.DEFAULT_TIMEOUT).read()
             lines = lines.decode('GBK')
             if len(lines) < 100:
                 return None
@@ -243,7 +243,7 @@ def get_today_ticks(code=None, retry_count=3, pause=0.001):
             request = Request(ct.TODAY_TICKS_PAGE_URL % (ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                        ct.PAGES['jv'], date,
                                                        symbol))
-            data_str = urlopen(request, timeout=10).read()
+            data_str = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             data_str = data_str.decode('GBK')
             if not data_str:
                 raise URLError('no data received')
@@ -358,7 +358,7 @@ def get_realtime_quotes(symbols=None, retry_count=3):
         try:
             request = Request(ct.LIVE_DATA_URL%(ct.P_TYPE['http'], ct.DOMAINS['sinahq'],
                                                         _random(), symbols_list))
-            text = urlopen(request,timeout=10).read()
+            text = urlopen(request,timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             if not text:
                 raise URLError('no data received')
@@ -383,7 +383,7 @@ def get_realtime_quotes(symbols=None, retry_count=3):
             return df
 
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -540,7 +540,7 @@ def _parase_fq_factor(code, start, end, retry_count=3):
         try:
             request = Request(ct.HIST_FQ_FACTOR_URL%(ct.P_TYPE['http'],
                                                      ct.DOMAINS['vsf'], symbol))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             if not text:
                 raise URLError('no data received')
             text = text[1:len(text)-1]
@@ -560,7 +560,7 @@ def _parase_fq_factor(code, start, end, retry_count=3):
             df['factor'] = df['factor'].astype(float)
             return df
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
 
@@ -575,7 +575,7 @@ def _parse_fq_data(url, index, retry_count, pause):
     for _ in range(retry_count):
         try:
             request = Request(url)
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             text = text.decode('GBK')
             if not text:
                 raise URLError('no data received')
@@ -629,9 +629,9 @@ def get_index(retry_count=3):
         try:
             request = Request(ct.INDEX_HQ_URL%(ct.P_TYPE['http'],
                                                      ct.DOMAINS['sinahq']))
-            text = urlopen(request, timeout=10).read()
+            text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
         except (URLError, HTTPError, timeout) as e:
-            time.sleep(1)
+            time.sleep(ct.DEFAULT_TIMEOUT)
         else:
             text = text.decode('GBK')
             if not text:
