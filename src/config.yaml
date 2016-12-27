@@ -31,8 +31,9 @@ analyzing:
         exclude_gem:    false
         exclude_suspension: true
         exclude_st:         true
-        raise_drop_scope:   [[30, -1.0, -0.50]]
-        position:           [[60, 0.7], [420, 1.0]]
+        #raise_drop_scope:   [[30, -1.0, -0.50]]
+        ma:             [[20, 5, 10]]
+        position:         [[60, 0.7], [420, 1.0]]
 
 
 monitor:

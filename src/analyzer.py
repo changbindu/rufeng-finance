@@ -6,6 +6,7 @@ import math
 import shutil
 import logging
 import datetime
+import traceback
 from threadpool import ThreadPool, makeRequests
 from jinja2 import Template, Environment, FileSystemLoader
 from tqdm import tqdm
@@ -212,7 +213,8 @@ class Analyzer(object):
             result.log = str(e)
             self.bad_stocks.append(result)
         except Exception as e:
-            msg = 'exception occurred: %s' % e
+            traceback.print_exc()
+            msg = 'exception occurred: %s' % str(e)
             logging.warning('%s: %s' % (stock, msg))
             result.status = 'BAD'
             result.log = msg
