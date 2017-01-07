@@ -56,6 +56,23 @@ def get_stock_basics(retry_count=3):
             return df
     raise IOError(ct.NETWORK_URL_ERROR_MSG)
 
+def get_last_report_period():
+    req = Request(ct.REPORT_SHORT_URL)
+    text = urlopen(req).read().decode('GBK')
+    html=lxml.html.parse(StringIO(text))
+
+    date_node = html.find('//select[@name=\"reportdate\"]')
+    for n in date_node.getchildren():
+        if 'selected' in n.attrib:
+            year = n.attrib['value']
+            break
+    quarter_node = html.find('//select[@name=\"quarter\"]')
+    for n in quarter_node.getchildren():
+        if 'selected' in n.attrib:
+            quarter = n.attrib['value']
+            break
+
+    return int(year), int(quarter)
 
 def get_report_data(year, quarter, retry_count=3):
     """

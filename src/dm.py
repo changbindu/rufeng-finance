@@ -170,31 +170,30 @@ class DataManager(object):
                     remap={'trade': 'price', 'per': 'pe'})
 
         # calculate the report quarter
-        report_date = datetime.date.today() - datetime.timedelta(days=90)
-        report_quarter = math.ceil(report_date.month/3.0)
+        report_year, report_quarter = ts.get_last_report_period()
 
-        logging.info('getting last report (%d quarter %d) from tushare' % (report_date.year, report_quarter))
-        df = ts.get_report_data(report_date.year, report_quarter)
+        logging.info('getting last report (%d quarter %d) from tushare' % (report_year, report_quarter))
+        df = ts.get_report_data(report_year, report_quarter)
         self._extract_from_dataframe(df)
 
         logging.info('getting last profit data from tushare')
-        df = ts.get_profit_data(report_date.year, report_quarter)
+        df = ts.get_profit_data(report_year, report_quarter)
         self._extract_from_dataframe(df, ignore=('net_profits', 'roe', 'eps'))
 
         logging.info('getting last operation data from tushare')
-        df = ts.get_operation_data(report_date.year, report_quarter)
+        df = ts.get_operation_data(report_year, report_quarter)
         self._extract_from_dataframe(df)
 
         logging.info('getting last growth data from tushare')
-        df = ts.get_growth_data(report_date.year, report_quarter)
+        df = ts.get_growth_data(report_year, report_quarter)
         self._extract_from_dataframe(df)
 
         logging.info('getting last debtpaying data from tushare')
-        df = ts.get_debtpaying_data(report_date.year, report_quarter)
+        df = ts.get_debtpaying_data(report_year, report_quarter)
         self._extract_from_dataframe(df)
 
         logging.info('getting last cashflow data from tushare')
-        df = ts.get_cashflow_data(report_date.year, report_quarter)
+        df = ts.get_cashflow_data(report_year, report_quarter)
         self._extract_from_dataframe(df)
 
         logging.info('getting history trading data from tushare')
