@@ -287,7 +287,8 @@ class DataManager(object):
                     if old is not None and (isinstance(old, float) and not math.isnan(old)) and \
                        new is not None and (isinstance(new, float) and not math.isnan(new)) and \
                        old != new:
-                        logging.debug('field %s changed: old(%s) -> new(%s), %s' % (col_name, str(old), str(new), stock))
+                        #logging.debug('field %s changed: old(%s) -> new(%s), %s' % (col_name, str(old), str(new), stock))
+                        pass
                     stock.__setattr__(real_field, new)
 
     def _remove_unavailable_stocks(self):
