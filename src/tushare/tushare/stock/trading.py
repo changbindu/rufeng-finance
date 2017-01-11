@@ -586,7 +586,7 @@ def _parse_fq_data(url, index, retry_count, pause):
             else:
                 sarr = [etree.tostring(node) for node in res]
             sarr = ''.join(sarr)
-            if sarr == '':
+            if sarr:
                 return None
             df = pd.read_html(sarr, skiprows = [0, 1])[0]
             if len(df) == 0:

@@ -158,10 +158,10 @@ class DataManager(object):
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
         logging.info('totally there are %d listed companies' % len(self._stocks))
 
-        # self._pick_hist_data_and_save(max_num_threads)
-
         logging.info('get indexes from tushare')
         self._get_indexes()
+
+        # self._pick_hist_data_and_save(self._stocks, False, self._indexes['000001'].hist_start_date, max_num_threads)
 
         logging.info('getting last stock trading data')
         df = ts.get_today_all()
@@ -364,15 +364,20 @@ class DataManager(object):
                         else:
                             stock.hist_data = hist.join(fq_factor)
 
-                        # WA: missing factor at 2014-07-08
-                        for miss_factor in ('2014-07-08',):
-                            if not is_index and miss_factor in stock.hist_data.index\
-                                    and math.isnan(stock.hist_data.factor[miss_factor]):
-                                i = stock.hist_data.index.get_loc(miss_factor)
-                                if i == 0:
-                                    logging.warning('%s: cannot fix missing factor' % stock)
+                        if not is_index:
+                            # WA: missing factor at some dates
+                            factor_nan_date = stock.hist_data[stock.hist_data.factor.isnull()].index
+                            for date in factor_nan_date:
+                                i = stock.hist_data.index.get_loc(date)
+
+                                if i == 0 and stock.hist_len > 1 and not math.isnan(stock.hist_data.factor[i + 1]):
+                                    stock.hist_data.factor[i] = stock.hist_data.factor[i + 1]
+                                    logging.debug('%s: fixed missing factor at %s' % (stock, str(date)))
+                                elif not math.isnan(stock.hist_data.factor[i - 1]):
+                                    stock.hist_data.factor[i] = stock.hist_data.factor[i - 1]
+                                    logging.debug('%s: fixed missing factor at %s' % (stock, str(date)))
                                 else:
-                                    stock.hist_data.factor[i] = stock.hist_data.factor[i-1]
+                                    logging.warning('%s: cannot fix missing factor at %s' % (stock, str(date)))
 
                         stock.sanitize()
                         logging.debug('%s: %d days trading data%s' % (
