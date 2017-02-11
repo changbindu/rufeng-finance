@@ -63,8 +63,11 @@ class StockMonitor(object):
             time.sleep(3)
 
     def _monitor_policy(self, stock, quotes, indexes):
-        if float(quotes['price']) > stock.config['high']:
-            logging.info('%s: price high than %s now' % (stock, stock.config['high']))
+        price = float(quotes['price'])
+        if price > stock.config['high']:
+            logging.info('%s: price high than %.2f now' % (stock, stock.config['high']))
+        if price < stock.config['low']:
+            logging.info('%s: price lower than %.2f now' % (stock, stock.config['low']))
 
 
 if __name__ == '__main__':
