@@ -74,8 +74,8 @@ class RufengFinanceCommandLine(cmd.Cmd):
     def do_download(self, args_str):
         parser = self._get_arg_parser()
         parser.add_argument("-t", "--threads",
-                            type=int, dest="threads", default=multiprocessing.cpu_count(),
-                            help="threads number to work [default equal cpu count]")
+                            type=int, dest="threads", default=2*multiprocessing.cpu_count(),
+                            help="threads number to work [default equal 2*ncpus]")
         parser.add_argument("-f", "--force_update",
                             action="store_true", dest="force_update", default=False,
                             help="download data ignore local existing data")
