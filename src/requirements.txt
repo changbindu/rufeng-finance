@@ -11,3 +11,4 @@ pyyaml
 tqdm
 threadpool
 jinja2
+pymongo
