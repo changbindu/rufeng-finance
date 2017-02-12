@@ -329,7 +329,7 @@ class DataManager(object):
             return
 
         def __pick_history():
-            nonlocal start_from
+            nonlocal start_from, failed
 
             while not squeue.empty():
                 stock = squeue.get()

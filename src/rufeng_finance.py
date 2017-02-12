@@ -333,6 +333,11 @@ class RufengFinanceCommandLine(cmd.Cmd):
         print('\n'.join(['analyze our stocks using local data',]))
 
     def do_edit(self, args_str=None):
+        parser = self._get_arg_parser()
+        options = self._parse_arg(parser, args_str)
+        if not options:
+            return
+
         os.system('vim ' + (args_str if args_str else 'config.yaml'))
 
     def help_edit(self):
@@ -359,9 +364,6 @@ class RufengFinanceCommandLine(cmd.Cmd):
 
     def help_quit(self):
         print('\n'.join(['quit cmd', ]))
-
-    def do_EOF(self, line):
-        return True
 
 
 if __name__ == '__main__':
