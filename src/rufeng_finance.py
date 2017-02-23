@@ -27,7 +27,7 @@ import util
 class RufengFinanceCommandLine(cmd.Cmd):
     prompt = '(Analyzer) '
     intro = 'A finance ayalyzer of python.\n' \
-            'Copyright © 2016 Changbin Du <changbin.du@gmail.com>. All rights reserved.'
+            'Copyright (C) 2016 Changbin Du <changbin.du@gmail.com>. All rights reserved.'
 
     def __init__(self, *args, **kwargs):
         self._dm = DataManager()
