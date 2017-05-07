@@ -1,4 +1,6 @@
-# rufeng-finance for python, expermental.
+=================
+rufeng-finance for python, expermental.
+=================
 (Use modified Tushare as data download backend.)
 .. code::
    $ source autocompletion.sh 
