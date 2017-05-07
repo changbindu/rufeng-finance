@@ -51,6 +51,10 @@ class Analyzer(object):
     def _analyze_single_stock(self, stock):
         """return if this stock is good"""
         hist_data = stock.hist_data
+        if hist_data is None:
+            logging.warning('%s: no hist_data' % (stock))
+            return False
+
         result = Result(stock)
 
         def get_config(name):
