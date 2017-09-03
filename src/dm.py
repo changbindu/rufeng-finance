@@ -7,6 +7,7 @@ import datetime, time
 from queue import Queue
 from threading import Thread
 from pymongo import MongoClient
+from pymongo import errors as mongo_errors
 import numpy as np
 from pandas import DataFrame
 import tushare as ts
@@ -252,6 +253,10 @@ class DataManager(object):
                 self._indexes[index.code] = index
                 count += 1
             logging.info('loaded %d indexes' % count)
+        except mongo_errors.ServerSelectionTimeoutError as e:
+            logging.error("Cannot load from database, please make sure your mongodb server is running.")
+            logging.error("Pymongo: %s" % str(e))
+            return
         except KeyError as e:
             logging.warning('%s, please try to drop database' % str(e))
             return
