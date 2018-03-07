@@ -1,6 +1,6 @@
 coloredlogs
 lxml
-matplotlib
+matplotlib<2.2.0
 numpy
 pandas>=0.18.1
 requests
