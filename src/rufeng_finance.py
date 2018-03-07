@@ -47,7 +47,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
 
         parser = MyArgumentParser(prog=sys._getframe().f_back.f_code.co_name.replace('do_', ''))
         parser.add_argument("--config",
-                            metavar="FILE", dest="config", default="config.yaml",
+                            metavar="FILE", dest="config", default="configs/default.yaml",
                             help="specific config file")
 
         return parser
