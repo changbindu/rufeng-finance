@@ -19,11 +19,11 @@ FORMAT = lambda x: '%.2f' % x
 FORMAT4 = lambda x: '%.4f' % x
 DOMAINS = {'sina': 'sina.com.cn', 'sinahq': 'sinajs.cn',
            'ifeng': 'ifeng.com', 'sf': 'finance.sina.com.cn',
-           'vsf': 'vip.stock.finance.sina.com.cn', 
+           'vsf': 'vip.stock.finance.sina.com.cn',
            'idx': 'www.csindex.com.cn', '163': 'money.163.com',
            'em': 'eastmoney.com', 'sseq': 'query.sse.com.cn',
            'sse': 'www.sse.com.cn', 'szse': 'www.szse.cn',
-           'oss': '218.244.146.57', 'idxip':'115.29.204.48',
+           'oss': 'file.tushare.org', 'idxip':'115.29.204.48',
            'shibor': 'www.shibor.org', 'mbox':'www.cbooo.cn'}
 PAGES = {'fd': 'index.phtml', 'dl': 'downxls.php', 'jv': 'json_v2.php',
          'cpt': 'newFLJK.php', 'ids': 'newSinaHy.php', 'lnews':'rollnews_ch_out_interface.php',
@@ -82,7 +82,7 @@ CASHFLOW_URL = '%s%s/q/go.php/vFinanceAnalyze/kind/cashflow/%s?s_i=&s_a=&s_c=&re
 SHIBOR_TYPE ={'Shibor': 'Shibor数据', 'Quote': '报价数据', 'Tendency': 'Shibor均值数据',
               'LPR': 'LPR数据', 'LPR_Tendency': 'LPR均值数据'}
 SHIBOR_DATA_URL = '%s%s/shibor/web/html/%s?nameNew=Historical_%s_Data_%s.xls&downLoadPath=data&nameOld=%s%s.xls&shiborSrc=http://www.shibor.org/shibor/'
-ALL_STOCK_BASICS_FILE = '%s%s/static/all.csv'%(P_TYPE['http'], DOMAINS['oss'])
+ALL_STOCK_BASICS_FILE = '%s%s/tsdata/all.csv'%(P_TYPE['http'], DOMAINS['oss'])
 ALL_CAL_FILE = '%s%s/static/calAll.csv'%(P_TYPE['http'], DOMAINS['oss'])
 SINA_CONCEPTS_INDEX_URL = '%smoney.%s/q/view/%s?param=class'
 SINA_INDUSTRY_INDEX_URL = '%s%s/q/view/%s'
@@ -141,7 +141,7 @@ def _write_head():
 def _write_console():
     sys.stdout.write(DATA_GETTING_FLAG)
     sys.stdout.flush()
-    
+
 def _write_tips(tip):
     sys.stdout.write(DATA_ROWS_TIPS%tip)
     sys.stdout.flush()
@@ -149,7 +149,7 @@ def _write_tips(tip):
 def _write_msg(msg):
     sys.stdout.write(str(msg))
     sys.stdout.flush()
-    
+
 def _check_input(year, quarter):
     if isinstance(year, str) or year < 1989 :
         raise TypeError(DATE_CHK_MSG)
@@ -157,7 +157,7 @@ def _check_input(year, quarter):
         raise TypeError(DATE_CHK_Q_MSG)
     else:
         return True
-    
+
 def _check_lhb_input(last):
     if last not in [5, 10, 30, 60]:
         raise TypeError(LHB_MSG)
