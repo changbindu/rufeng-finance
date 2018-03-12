@@ -97,7 +97,7 @@ def get_hist_data(code=None, start=None, end=None,
                 if date in df.index:
                     df.drop(date, inplace=True)
             return df
-    raise IOError(ct.NETWORK_URL_ERROR_MSG)
+    raise IOError(ct.NETWORK_URL_ERROR_MSG + ': ' + url)
 
 
 def _parsing_dayprice_json(pageNum=1, retry_count=3):
@@ -110,11 +110,11 @@ def _parsing_dayprice_json(pageNum=1, retry_count=3):
      -------
         DataFrame 当日所有股票交易数据(DataFrame)
     """
+    url = ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'], ct.PAGES['jv'], pageNum)
     for _ in range(retry_count):
         try:
             ct._write_console()
-            request = Request(ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
-                                         ct.PAGES['jv'], pageNum))
+            request = Request(url)
             text = urlopen(request, timeout=ct.DEFAULT_TIMEOUT).read()
             if text == 'null':
                 return None
@@ -136,7 +136,7 @@ def _parsing_dayprice_json(pageNum=1, retry_count=3):
             return df
         except (URLError, HTTPError, timeout, timeout) as e:
             time.sleep(ct.DEFAULT_TIMEOUT)
-    raise IOError(ct.NETWORK_URL_ERROR_MSG)
+    raise IOError(ct.NETWORK_URL_ERROR_MSG + ': ' + url)
 
 
 def get_tick_data(code=None, date=None, retry_count=3, pause=0.001):
@@ -160,10 +160,10 @@ def get_tick_data(code=None, date=None, retry_count=3, pause=0.001):
     if code is None or len(code)!=6 or date is None:
         return None
     symbol = _code_to_symbol(code)
+    url = ct.TICK_PRICE_URL % (ct.P_TYPE['http'], ct.DOMAINS['sf'], ct.PAGES['dl'], date, symbol)
     for _ in range(retry_count):
         try:
-            re = Request(ct.TICK_PRICE_URL % (ct.P_TYPE['http'], ct.DOMAINS['sf'], ct.PAGES['dl'],
-                                date, symbol))
+            re = Request(url)
             lines = urlopen(re, timeout=ct.DEFAULT_TIMEOUT).read()
             lines = lines.decode('GBK')
             if len(lines) < 20:
@@ -605,7 +605,7 @@ def _parse_fq_data(url, index, retry_count, pause):
             time.sleep(pause)
         else:
             return df
-    raise IOError(ct.NETWORK_URL_ERROR_MSG)
+    raise IOError(ct.NETWORK_URL_ERROR_MSG + ': ' + url)
 
 
 def get_index(retry_count=3):
