@@ -140,7 +140,7 @@ class DataManager(object):
             value = 1
         self._data_period_y = value
 
-    def pick_data(self, max_num_threads = 20):
+    def pick_data(self, max_num_threads = 20, pause = 0):
         """
         pick all necessary data from local database and from internet for loaded stocks. This function will take a while.
         """
@@ -191,7 +191,7 @@ class DataManager(object):
 
         logging.info('getting history trading data from tushare')
         start_from = self.indexes['000001'].hist_start_date
-        data_full = self._pick_hist_data_and_save(self.stocks, False, start_from, max_num_threads)  # anything that pulling data must before here
+        data_full = self._pick_hist_data_and_save(self.stocks, False, start_from, max_num_threads, pause)  # anything that pulling data must before here
 
         self._remove_unavailable_stocks()
 
@@ -307,7 +307,7 @@ class DataManager(object):
         start_from = datetime.date.today() - datetime.timedelta(days=365 * self._data_period_y)
         self._pick_hist_data_and_save(self.indexes, True, start_from)
 
-    def _pick_hist_data_and_save(self, stocks, is_index, start_from, max_num_threads=1):
+    def _pick_hist_data_and_save(self, stocks, is_index, start_from, max_num_threads=1, pause = 0):
         threads = []
         squeue = Queue()
         update_to = StockCalendar().last_completed_trade_day()
@@ -340,7 +340,7 @@ class DataManager(object):
                                 start_from, update_to, stock))
                     hist = ts.get_hist_data(stock.symbol if is_index else stock.code,
                                             start=str(start_from), end=str(update_to), ktype='D',
-                                            retry_count=5, pause=0)
+                                            retry_count=5, pause=pause)
                     if not is_index:
                         fq_factor = ts.get_fq_factor(stock.code, start=str(start_from), end=str(update_to))  # 前复权数据
                     else:

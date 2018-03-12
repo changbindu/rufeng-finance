@@ -75,11 +75,14 @@ class RufengFinanceCommandLine(cmd.Cmd):
     def do_download(self, args_str):
         parser = self._get_arg_parser()
         parser.add_argument("-t", "--threads",
-                            type=int, dest="threads", default=2 * multiprocessing.cpu_count(),
-                            help="threads number to work [default equal 2*ncpus]")
+                            type=int, dest="threads", default=1,
+                            help="threads number to work")
         parser.add_argument("-f", "--force_update",
                             action="store_true", dest="force_update", default=False,
                             help="download data ignore local existing data")
+        parser.add_argument("-p", "--pause",
+                            type=float, dest="pause", default=0.1,
+                            help="pause duration during network retry")
         options = self._parse_arg(parser, args_str)
         if not options:
             return
