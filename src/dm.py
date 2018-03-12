@@ -123,19 +123,11 @@ class LocalDataManager(object):
 
 class DataManager(object):
     def __init__(self):
-        self._stocks = {}
-        self._indexes = {}
-        self._local_dm = LocalDataManager()
+        self.stocks = {}
+        self.indexes = {}
+        self.local_dm = LocalDataManager()
 
         self._data_period_y = 3  # years
-
-    @property
-    def stocks(self):
-        return self._stocks
-
-    @property
-    def indexes(self):
-        return self._indexes
 
     @property
     def data_period_y(self):
@@ -157,12 +149,12 @@ class DataManager(object):
 
         # self.data_manager.drop_stock()
         # self.stocks = {key: self.stocks[key] for key in ['600233', '600130']}
-        logging.info('totally there are %d listed companies' % len(self._stocks))
+        logging.info('totally there are %d listed companies' % len(self.stocks))
 
         logging.info('get indexes from tushare')
         self._get_indexes()
 
-        # self._pick_hist_data_and_save(self._stocks, False, self._indexes['000001'].hist_start_date, max_num_threads)
+        # self._pick_hist_data_and_save(self.stocks, False, self.indexes['000001'].hist_start_date, max_num_threads)
 
         logging.info('getting last stock trading data')
         df = ts.get_today_all()
@@ -198,8 +190,8 @@ class DataManager(object):
         self._extract_from_dataframe(df)
 
         logging.info('getting history trading data from tushare')
-        start_from = self._indexes['000001'].hist_start_date
-        data_full = self._pick_hist_data_and_save(self._stocks, False, start_from, max_num_threads)  # anything that pulling data must before here
+        start_from = self.indexes['000001'].hist_start_date
+        data_full = self._pick_hist_data_and_save(self.stocks, False, start_from, max_num_threads)  # anything that pulling data must before here
 
         self._remove_unavailable_stocks()
 
@@ -225,7 +217,7 @@ class DataManager(object):
         df = ts.get_stock_basics()
         logging.info('tushare listed %d stocks' % df.index.size)
         for index, row in df.iterrows():
-            stock = self._stocks[index] if index in self._stocks else Stock(code=index)
+            stock = self.stocks[index] if index in self.stocks else Stock(code=index)
             for col_name in df.columns:
                 # we only trust these data
                 if not col_name in ('name', 'industry', 'area', 'timeToMarket'):
@@ -236,21 +228,21 @@ class DataManager(object):
                     value = row[col_name]
                     value = util.strQ2B(value).replace(' ', '') if isinstance(value, str) else value
                     stock.__setattr__(col_name, value)
-            self._stocks[stock.code] = stock
+            self.stocks[stock.code] = stock
 
     def load_from_db(self, remove_invalid=True):
         """load stocks from local database only"""
         logging.info('try to load stock data from local database')
         count = 0
         try:
-            for stock in self._local_dm.find_stock(show_process=True):
-                self._stocks[stock.code] = stock
+            for stock in self.local_dm.find_stock(show_process=True):
+                self.stocks[stock.code] = stock
                 count += 1
             logging.info('loaded %d stocks' % count)
 
             count = 0
-            for index in self._local_dm.find_index():
-                self._indexes[index.code] = index
+            for index in self.local_dm.find_index():
+                self.indexes[index.code] = index
                 count += 1
             logging.info('loaded %d indexes' % count)
         except mongo_errors.ServerSelectionTimeoutError as e:
@@ -264,7 +256,7 @@ class DataManager(object):
             self._remove_unavailable_stocks()
 
     def invalid_loaded_stocks(self):
-        self._stocks = {}
+        self.stocks = {}
 
     def _extract_from_dataframe(self, df, ignore=(), remap={}, special_handler={}):
         if df is None or not isinstance(df, DataFrame):
@@ -272,10 +264,10 @@ class DataManager(object):
             return
         for index, row in df.iterrows():
             code = row['code']
-            if not code in self._stocks:
+            if not code in self.stocks:
                 logging.warning('stock %s missed?' % code)
                 continue
-            stock = self._stocks[code]
+            stock = self.stocks[code]
             for col_name in df.columns:
                 if col_name == 'code' or col_name in ignore:
                     continue
@@ -298,22 +290,22 @@ class DataManager(object):
 
     def _remove_unavailable_stocks(self):
         stocks_to_remove = list()
-        for code, stock in self._stocks.items():
+        for code, stock in self.stocks.items():
             if stock.hist_data is None or stock.hist_data.index.size == 0:
                 stocks_to_remove.append(stock)
         for stock in stocks_to_remove:
-            del self._stocks[stock.code]
+            del self.stocks[stock.code]
             logging.warning('removed unavailable stock %s (maybe not IPO yet)' % stock)
 
     def _get_indexes(self):
-        if not len(self._indexes):
+        if not len(self.indexes):
             for k, v in Index.index_name_map.items():
                     index = Index(code=k, symbol=v[0], name=v[1])
-                    self._indexes[index.code] = index
+                    self.indexes[index.code] = index
 
         logging.info('get all hist data of indexes')
         start_from = datetime.date.today() - datetime.timedelta(days=365 * self._data_period_y)
-        self._pick_hist_data_and_save(self._indexes, True, start_from)
+        self._pick_hist_data_and_save(self.indexes, True, start_from)
 
     def _pick_hist_data_and_save(self, stocks, is_index, start_from, max_num_threads=1):
         threads = []
@@ -391,9 +383,9 @@ class DataManager(object):
                                 append and ', appended %d days'%hist.index.size or ''))
                         stock.last_update = datetime.datetime.now()
                         if is_index:
-                            self._local_dm.save_index(stock)
+                            self.local_dm.save_index(stock)
                         else:
-                            self._local_dm.save_stock(stock)
+                            self.local_dm.save_stock(stock)
                 squeue.task_done()
 
         num_threads = min(max_num_threads, int(squeue.qsize() / 2))
@@ -422,11 +414,11 @@ class DataManager(object):
         return not failed
 
     def find_one_stock_from_db(self, code):
-        return self._local_dm.find_one_stock(code)
+        return self.local_dm.find_one_stock(code)
 
     def find_one_index_from_db(self, code):
-        return self._local_dm.find_one_index(code)
+        return self.local_dm.find_one_index(code)
 
     def drop_local_data(self, code):
-        self._local_dm.drop_index(code)
-        self._local_dm.drop_stock(code)
+        self.local_dm.drop_index(code)
+        self.local_dm.drop_stock(code)

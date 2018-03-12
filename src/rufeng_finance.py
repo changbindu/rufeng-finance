@@ -3,6 +3,7 @@ __author__ = 'Du, Changbin <changbin.du@gmail.com>'
 __version__ = '1.1.0'
 
 import sys
+
 if sys.version_info < (3, 0):
     raise RuntimeError('Python3 is required')
 sys.path.insert(0, 'tushare')
@@ -30,8 +31,8 @@ class RufengFinanceCommandLine(cmd.Cmd):
             'Copyright (C) 2016 Changbin Du <changbin.du@gmail.com>. All rights reserved.'
 
     def __init__(self, *args, **kwargs):
-        self._dm = DataManager()
-        self._config = None
+        self.dm = DataManager()
+        self.config = None
         self.loaded = False
         super(RufengFinanceCommandLine, self).__init__(*args, **kwargs)
 
@@ -58,23 +59,23 @@ class RufengFinanceCommandLine(cmd.Cmd):
             return None
         if options.config:
             print("using config %s" % options.config)
-            self._config = yaml.load(open(options.config))
+            self.config = yaml.load(open(options.config))
         return options
 
     def do_load(self, args_str=None):
-        if self.loaded and len(self._dm.stocks):
+        if self.loaded and len(self.dm.stocks):
             print('already loaded')
         else:
-            self._dm.load_from_db()
+            self.dm.load_from_db()
             self.loaded = True
 
     def help_load(self):
-        print('\n'.join(['load data from local database to memory',]))
+        print('\n'.join(['load data from local database to memory', ]))
 
     def do_download(self, args_str):
         parser = self._get_arg_parser()
         parser.add_argument("-t", "--threads",
-                            type=int, dest="threads", default=2*multiprocessing.cpu_count(),
+                            type=int, dest="threads", default=2 * multiprocessing.cpu_count(),
                             help="threads number to work [default equal 2*ncpus]")
         parser.add_argument("-f", "--force_update",
                             action="store_true", dest="force_update", default=False,
@@ -83,14 +84,15 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if not options:
             return
 
-        self._dm.data_period_y = self._config['core']['data_period']
+        self.dm.data_period_y = self.config['core']['data_period']
         if options.force_update and self.loaded:
-            self._dm.invalid_loaded_stocks()
+            self.dm.invalid_loaded_stocks()
             self.loaded = False
         elif not self.loaded:
             self.do_load()
+
         try:
-            data_full = self._dm.pick_data(options.threads)
+            data_full = self.dm.pick_data(options.threads)
         except IOError as e:
             print(e)
             traceback.print_exc()
@@ -99,7 +101,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
                 logging.warning('not all data successfully picked')
 
     def help_download(self):
-        print('\n'.join(['download stock data from internet (years)',]))
+        print('\n'.join(['download stock data from internet (years)', ]))
 
     def complete_download(self, text, line, begidx, endidx):
         candidate = ['-f', '--force_update']
@@ -120,11 +122,11 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if not len(options.codes):
             if not self.loaded:
                 self.do_load()
-            stocks = self._dm.stocks
+            stocks = self.dm.stocks
         else:
             stocks = {}
             for code in options.codes:
-                stock = self._dm.find_one_stock_from_db(code)
+                stock = self.dm.find_one_stock_from_db(code)
                 if stock is None:
                     logging.error('unknown stock %s', code)
                 else:
@@ -142,7 +144,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
         logging.info('checked %d, good %d, bad %d' % (good + bad, good, bad))
 
     def help_check(self):
-        print('\n'.join(['check data in local database',]))
+        print('\n'.join(['check data in local database', ]))
 
     def do_drop(self, args_str):
         parser = self._get_arg_parser()
@@ -154,14 +156,14 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if len(options.codes) < 1:
             if util.confirm('drop all data?'):
                 logging.info('all local data will be dropped')
-                self._dm.drop_local_data(None)
+                self.dm.drop_local_data(None)
         else:
             for code in options.codes:
                 logging.info('drop stock/index %s' % code)
-                self._dm.drop_local_data(code)
+                self.dm.drop_local_data(code)
 
     def help_drop(self):
-        print('\n'.join(['drop data in local database',]))
+        print('\n'.join(['drop data in local database', ]))
 
     def do_list(self, args_str):
         parser = self._get_arg_parser()
@@ -176,11 +178,11 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if not len(options.codes):
             if not self.loaded:
                 self.do_load()
-            stocks = self._dm.stocks
+            stocks = self.dm.stocks
         else:
             stocks = {}
             for code in options.codes:
-                stock = self._dm.find_one_stock_from_db(code)
+                stock = self.dm.find_one_stock_from_db(code)
                 if stock is None:
                     logging.error('unknown stock %s', code)
                 else:
@@ -191,15 +193,15 @@ class RufengFinanceCommandLine(cmd.Cmd):
             return
 
         list = []
-        for code, stock in self._dm.stocks.items():
+        for code, stock in self.dm.stocks.items():
             list.append({'code': code, 'name': stock.name, 'price': stock.price,
                          'hist_data': '%4d[%s - %s]' % (
-                         stock.hist_data.index.size, stock.hist_data.tail(1).index[0], stock.hist_data.index[0]),
+                             stock.hist_data.index.size, stock.hist_data.tail(1).index[0], stock.hist_data.index[0]),
                          'update': stock.last_update.strftime("%Y-%m-%d %H:%M:%S")
                          })
         df = DataFrame(list)
 
-        logging.info('all %d available stocks can be analyzed' % len(self._dm.stocks))
+        logging.info('all %d available stocks can be analyzed' % len(self.dm.stocks))
         print(df.to_string(columns=('code', 'name', 'price', 'hist_data', 'update')))
 
         if options.output:
@@ -208,7 +210,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
                 df.to_html(f, escape=False, columns=('code', 'name', 'price', 'hist_data', 'update'))
 
     def help_list(self):
-        print('\n'.join(['list all stocks in local database',]))
+        print('\n'.join(['list all stocks in local database', ]))
 
     def do_plot(self, args_str):
         parser = self._get_arg_parser()
@@ -216,11 +218,11 @@ class RufengFinanceCommandLine(cmd.Cmd):
                             metavar="FILE", dest="output",
                             help="specific output dir or file"),
         parser.add_argument("--qfq",
-                         action="store_true", dest="qfq", default=False,
-                         help="show forward adjusted history price")
+                            action="store_true", dest="qfq", default=False,
+                            help="show forward adjusted history price")
         parser.add_argument("-i", "--index-overlay",
-                         action="store_true", dest="index_overlay", default=False,
-                         help="overlay index history on price")
+                            action="store_true", dest="index_overlay", default=False,
+                            help="overlay index history on price")
         parser.add_argument('codes', nargs='*')
         options = self._parse_arg(parser, args_str)
         if not options:
@@ -230,10 +232,10 @@ class RufengFinanceCommandLine(cmd.Cmd):
             logging.error("missing argument stock code")
             return -1
 
-        index = self._dm.find_one_index_from_db('000001')
+        index = self.dm.find_one_index_from_db('000001')
 
         for code in options.codes:
-            stock = self._dm.find_one_stock_from_db(code)
+            stock = self.dm.find_one_stock_from_db(code)
             if stock is None:
                 logging.error('unknown stock %s', code)
                 return
@@ -253,7 +255,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
                 StockPlot().plot_hist(stock, index, options.index_overlay, path)
 
     def help_plot(self):
-        print('\n'.join(['plot stock diagram',]))
+        print('\n'.join(['plot stock diagram', ]))
 
     def do_analyze(self, args_str):
         parser = self._get_arg_parser()
@@ -264,8 +266,8 @@ class RufengFinanceCommandLine(cmd.Cmd):
                             type=int, dest="threads", default=multiprocessing.cpu_count(),
                             help="threads number to work [default equal cpu count]")
         parser.add_argument("--plot-all",
-                         action="store_true", dest="plot_all", default=False,
-                         help="plot all stocks, not only good ones")
+                            action="store_true", dest="plot_all", default=False,
+                            help="plot all stocks, not only good ones")
         parser.add_argument('codes', nargs='*')
         options = self._parse_arg(parser, args_str)
         if not options:
@@ -273,7 +275,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
 
         schemes = []
         user_options = []
-        for k, v in self._config['analyzing']['schemes'].items():
+        for k, v in self.config['analyzing']['schemes'].items():
             schemes.append(v)
             user_options.append(v['desc'])
         select = util.select(user_options, 'please select a scheme used for analyzing')
@@ -286,18 +288,18 @@ class RufengFinanceCommandLine(cmd.Cmd):
         stocks = {}
         if len(options.codes):
             for code in options.codes:
-                if code in self._dm.stocks:
-                    stocks[code] = self._dm.stocks[code]
+                if code in self.dm.stocks:
+                    stocks[code] = self.dm.stocks[code]
                 else:
                     logging.error('unknown stock %s', code)
         else:
-            stocks = self._dm.stocks
+            stocks = self.dm.stocks
 
         if not len(stocks):
             logging.error('no stocks found in local database, please run \'load\' command first')
             return
 
-        analyzer = Analyzer(stocks, self._dm.indexes, config)
+        analyzer = Analyzer(stocks, self.dm.indexes, config)
         logging.info('all %d available stocks will be analyzed' % len(analyzer.stocks))
         logging.info('-----------invoking data analyzer module-------------')
         analyzer.analyze(threads=options.threads)
@@ -330,7 +332,7 @@ class RufengFinanceCommandLine(cmd.Cmd):
             logging.info('done')
 
     def help_analyze(self):
-        print('\n'.join(['analyze our stocks using local data',]))
+        print('\n'.join(['analyze our stocks using local data', ]))
 
     def do_edit(self, args_str=None):
         parser = self._get_arg_parser()
@@ -352,12 +354,12 @@ class RufengFinanceCommandLine(cmd.Cmd):
         if not options:
             return
 
-        config = self._config['monitor']
+        config = self.config['monitor']
         logging.info('monitor config:\n%s' % yaml.dump(config))
         StockMonitor(config).start_and_join()
 
     def help_monitor(self):
-        print('\n'.join(['monitor realtime market status',]))
+        print('\n'.join(['monitor realtime market status', ]))
 
     def do_quit(self, line):
         return True
